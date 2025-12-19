@@ -1,0 +1,352 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>4205Game庫 - 精選遊戲集合</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', 'Microsoft JhengHei', sans-serif;
+        }
+        
+        body {
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+            color: #fff;
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        
+        header {
+            text-align: center;
+            margin-bottom: 40px;
+            padding: 20px;
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 20px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+        }
+        
+        .logo {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 15px;
+        }
+        
+        .logo-icon {
+            font-size: 2.5rem;
+            color: #4cc9f0;
+            margin-right: 15px;
+        }
+        
+        h1 {
+            font-size: 3.5rem;
+            background: linear-gradient(to right, #4cc9f0, #4361ee);
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+            text-shadow: 0 5px 15px rgba(76, 201, 240, 0.3);
+            margin-bottom: 10px;
+        }
+        
+        .subtitle {
+            font-size: 1.2rem;
+            color: #a5b4fc;
+            margin-bottom: 20px;
+        }
+        
+        .intro {
+            max-width: 800px;
+            margin: 0 auto;
+            line-height: 1.6;
+            color: #cbd5e1;
+            font-size: 1.1rem;
+        }
+        
+        .games-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 30px;
+            margin: 40px 0;
+        }
+        
+        .game-card {
+            background: rgba(30, 41, 59, 0.7);
+            border-radius: 15px;
+            overflow: hidden;
+            transition: all 0.3s ease;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.2);
+            display: flex;
+            flex-direction: column;
+            height: 100%;
+        }
+        
+        .game-card:hover {
+            transform: translateY(-10px);
+            box-shadow: 0 15px 30px rgba(0, 0, 0, 0.4);
+            border-color: rgba(76, 201, 240, 0.5);
+        }
+        
+        .game-icon {
+            height: 150px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 4rem;
+            color: #fff;
+        }
+        
+        .game-content {
+            padding: 20px;
+            flex-grow: 1;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .game-title {
+            font-size: 1.8rem;
+            margin-bottom: 10px;
+            color: #fff;
+        }
+        
+        .game-description {
+            color: #cbd5e1;
+            margin-bottom: 20px;
+            line-height: 1.5;
+            flex-grow: 1;
+        }
+        
+        .play-button {
+            display: inline-block;
+            background: linear-gradient(to right, #4361ee, #3a0ca3);
+            color: white;
+            padding: 12px 25px;
+            border-radius: 50px;
+            text-decoration: none;
+            font-weight: bold;
+            font-size: 1.1rem;
+            text-align: center;
+            transition: all 0.3s ease;
+            border: none;
+            cursor: pointer;
+            box-shadow: 0 5px 15px rgba(67, 97, 238, 0.3);
+        }
+        
+        .play-button:hover {
+            background: linear-gradient(to right, #3a0ca3, #4361ee);
+            transform: scale(1.05);
+            box-shadow: 0 8px 20px rgba(67, 97, 238, 0.4);
+        }
+        
+        .game-card:nth-child(1) .game-icon { background: linear-gradient(135deg, #4361ee, #3a0ca3); }
+        .game-card:nth-child(2) .game-icon { background: linear-gradient(135deg, #f72585, #b5179e); }
+        .game-card:nth-child(3) .game-icon { background: linear-gradient(135deg, #4cc9f0, #4895ef); }
+        .game-card:nth-child(4) .game-icon { background: linear-gradient(135deg, #ff9e00, #ff9100); }
+        
+        footer {
+            text-align: center;
+            margin-top: 60px;
+            padding: 20px;
+            color: #94a3b8;
+            font-size: 0.9rem;
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        
+        .instructions {
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 15px;
+            padding: 20px;
+            margin-top: 30px;
+            border-left: 4px solid #4cc9f0;
+        }
+        
+        .instructions h3 {
+            color: #4cc9f0;
+            margin-bottom: 10px;
+        }
+        
+        @media (max-width: 768px) {
+            h1 {
+                font-size: 2.5rem;
+            }
+            
+            .games-grid {
+                grid-template-columns: 1fr;
+                gap: 20px;
+            }
+            
+            .game-icon {
+                height: 120px;
+                font-size: 3rem;
+            }
+        }
+        
+        /* 動畫效果 */
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        .fade-in {
+            animation: fadeIn 0.8s ease forwards;
+        }
+        
+        .delay-1 { animation-delay: 0.2s; opacity: 0; }
+        .delay-2 { animation-delay: 0.4s; opacity: 0; }
+        .delay-3 { animation-delay: 0.6s; opacity: 0; }
+        .delay-4 { animation-delay: 0.8s; opacity: 0; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header class="fade-in">
+            <div class="logo">
+                <i class="fas fa-gamepad logo-icon"></i>
+            </div>
+            <h1>4205Game庫</h1>
+            <div class="subtitle">精選遊戲集合 - 隨時暢玩</div>
+            <p class="intro">
+                歡迎來到4205Game庫！這裡收集了各種有趣的網頁遊戲，點擊下方遊戲卡片即可開始遊玩。
+                所有遊戲均為精心挑選，保證讓您享受愉快的遊戲時光。
+            </p>
+        </header>
+        
+        <main>
+            <div class="games-grid">
+                <!-- 方塊戰爭遊戲 -->
+                <div class="game-card fade-in delay-1">
+                    <div class="game-icon">
+                        <i class="fas fa-cube"></i>
+                    </div>
+                    <div class="game-content">
+                        <h2 class="game-title">方塊戰爭</h2>
+                        <p class="game-description">
+                            在多彩的方塊世界展開激烈對戰！控制你的方塊擊敗對手，佔領更多領地。
+                            簡單易上手，但需要策略思考才能取得最終勝利。
+                        </p>
+                        <a href="inex0014.html" class="play-button">
+                            <i class="fas fa-play-circle"></i> 開始遊戲
+                        </a>
+                    </div>
+                </div>
+                
+                <!-- 恐龍遊戲 -->
+                <div class="game-card fade-in delay-2">
+                    <div class="game-icon">
+                        <i class="fas fa-dragon"></i>
+                    </div>
+                    <div class="game-content">
+                        <h2 class="game-title">恐龍冒險</h2>
+                        <p class="game-description">
+                            穿越到史前時代，控制可愛的恐龍闖過重重障礙！
+                            躲避危險，收集寶物，挑戰最高分數，看看你能跑多遠。
+                        </p>
+                        <a href="Dinosaur Games.html" class="play-button">
+                            <i class="fas fa-play-circle"></i> 開始遊戲
+                        </a>
+                    </div>
+                </div>
+                
+                <!-- 蜜蜂遊戲 -->
+                <div class="game-card fade-in delay-3">
+                    <div class="game-icon">
+                        <i class="fas fa-bee"></i>
+                    </div>
+                    <div class="game-content">
+                        <h2 class="game-title">蜜蜂採蜜</h2>
+                        <p class="game-description">
+                            扮演勤勞的小蜜蜂，在花園中採集花蜜，躲避蜘蛛和其他危險。
+                            為蜂巢收集足夠的花蜜，成為最優秀的採蜜專家！
+                        </p>
+                        <a href="bee5.html" class="play-button">
+                            <i class="fas fa-play-circle"></i> 開始遊戲
+                        </a>
+                    </div>
+                </div>
+                
+                <!-- 螞蟻遊戲 -->
+                <div class="game-card fade-in delay-4">
+                    <div class="game-icon">
+                        <i class="fas fa-ant"></i>
+                    </div>
+                    <div class="game-content">
+                        <h2 class="game-title">螞蟻王國</h2>
+                        <p class="game-description">
+                            進入微觀世界，指揮螞蟻軍團收集食物，建設地下王國。
+                            面對各種自然挑戰，保護你的螞蟻族群不斷壯大。
+                        </p>
+                        <a href="ant10.html" class="play-button">
+                            <i class="fas fa-play-circle"></i> 開始遊戲
+                        </a>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="instructions fade-in">
+                <h3><i class="fas fa-info-circle"></i> 使用說明</h3>
+                <p>1. 點擊任意遊戲卡片上的「開始遊戲」按鈕即可進入遊戲頁面</p>
+                <p>2. 如果遊戲無法載入，請確認遊戲檔案(inex0014.html, Dinosaur Games.html, bee5.html, ant10.html)與本網頁位於相同目錄下</p>
+                <p>3. 本頁面完全響應式設計，可在手機、平板和電腦上正常顯示</p>
+            </div>
+        </main>
+        
+        <footer class="fade-in">
+            <p>4205Game庫 &copy; 2023 - 精選遊戲集合 | 設計：網頁設計專案</p>
+            <p>本網站僅供學習與娛樂使用，遊戲版權歸原作者所有</p>
+        </footer>
+    </div>
+
+    <script>
+        // 添加按鈕點擊效果
+        document.querySelectorAll('.play-button').forEach(button => {
+            button.addEventListener('click', function(e) {
+                // 檢查連結是否存在
+                const href = this.getAttribute('href');
+                if (href) {
+                    // 添加點擊反饋
+                    this.style.transform = 'scale(0.95)';
+                    setTimeout(() => {
+                        this.style.transform = '';
+                    }, 200);
+                    
+                    // 這裡可以添加更多邏輯，比如檢查檔案是否存在
+                    console.log(`嘗試載入遊戲: ${href}`);
+                }
+            });
+        });
+        
+        // 檢查頁面載入時元素是否進入視野，添加淡入效果
+        document.addEventListener('DOMContentLoaded', function() {
+            // 簡單的滾動動畫觸發
+            const observerOptions = {
+                threshold: 0.1,
+                rootMargin: '0px 0px -50px 0px'
+            };
+            
+            const observer = new IntersectionObserver((entries) => {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting) {
+                        entry.target.classList.add('fade-in');
+                    }
+                });
+            }, observerOptions);
+            
+            // 觀察所有遊戲卡片
+            document.querySelectorAll('.game-card').forEach(card => {
+                observer.observe(card);
+            });
+        });
+    </script>
+</body>
+</html>
