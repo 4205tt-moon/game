@@ -1,0 +1,1041 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>螞蟻挖掘遊戲（優化版）</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            background-color: #f7f3e9;
+            font-family: 'Inter', sans-serif;
+        }
+
+        #game-container {
+            width: 95vw;
+            max-width: 800px;
+            height: 95vh;
+            max-height: 1000px;
+            position: relative;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+            border-radius: 12px;
+            overflow: hidden;
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+        }
+
+        #game-canvas {
+            display: block;
+            width: 100%;
+            height: 100%;
+            background-color: transparent; 
+        }
+
+        .queen-ant-text {
+            color: #ff4500;
+            font-weight: bold;
+        }
+
+        /* 統計視窗樣式 */
+        #stats-window {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background-color: rgba(0, 0, 0, 0.85);
+            color: white;
+            border-radius: 8px;
+            padding: 15px;
+            z-index: 20;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+            display: none; /* 預設隱藏 */
+            min-width: 200px;
+            max-width: 300px;
+        }
+
+        #stats-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+            padding-bottom: 8px;
+        }
+
+        #stats-title {
+            font-weight: bold;
+            font-size: 1.1rem;
+        }
+
+        #close-stats {
+            background: none;
+            border: none;
+            color: white;
+            font-size: 1.5rem;
+            cursor: pointer;
+            padding: 0 5px;
+            line-height: 1;
+        }
+
+        #close-stats:hover {
+            color: #ff4500;
+        }
+
+        .stat-row {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 8px;
+            font-size: 0.9rem;
+        }
+
+        .stat-label {
+            color: #aaa;
+        }
+
+        .stat-value {
+            font-weight: bold;
+        }
+
+        /* 統計按鈕樣式 */
+        #stats-button {
+            position: absolute;
+            bottom: 10px;
+            right: 10px;
+            background-color: rgba(0, 0, 0, 0.75);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            padding: 8px 12px;
+            font-size: 0.9rem;
+            cursor: pointer;
+            z-index: 10;
+            transition: background-color 0.2s;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+        }
+
+        #stats-button:hover {
+            background-color: rgba(0, 0, 0, 0.9);
+        }
+
+        /* 幫助視窗樣式 */
+        #help-button {
+            position: absolute;
+            bottom: 10px;
+            left: 10px;
+            background-color: rgba(0, 0, 0, 0.75);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            padding: 8px 12px;
+            font-size: 0.9rem;
+            cursor: pointer;
+            z-index: 10;
+            transition: background-color 0.2s;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+        }
+
+        #help-button:hover {
+            background-color: rgba(0, 0, 0, 0.9);
+        }
+
+        #help-window {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background-color: rgba(0, 0, 0, 0.85);
+            color: white;
+            border-radius: 8px;
+            padding: 20px;
+            z-index: 20;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+            display: none; /* 預設隱藏 */
+            width: 80%;
+            max-width: 400px;
+        }
+
+        #help-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+            padding-bottom: 10px;
+        }
+
+        #help-title {
+            font-weight: bold;
+            font-size: 1.2rem;
+        }
+
+        #close-help {
+            background: none;
+            border: none;
+            color: white;
+            font-size: 1.5rem;
+            cursor: pointer;
+            padding: 0 5px;
+            line-height: 1;
+        }
+
+        #close-help:hover {
+            color: #ff4500;
+        }
+
+        .help-content {
+            line-height: 1.5;
+            font-size: 0.9rem;
+        }
+
+        .help-item {
+            margin-bottom: 8px;
+        }
+
+        .key {
+            display: inline-block;
+            background-color: rgba(255, 255, 255, 0.1);
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-family: monospace;
+        }
+    </style>
+</head>
+<body>
+    <div id="game-container">
+        <div id="stats-window">
+            <div id="stats-header">
+                <div id="stats-title">遊戲統計</div>
+                <button id="close-stats" aria-label="關閉統計視窗">&times;</button>
+            </div>
+            <div class="stat-row">
+                <span class="stat-label">螞蟻數量：</span>
+                <span id="stats-ant-count" class="stat-value">0</span>
+            </div>
+            <div class="stat-row">
+                <span class="stat-label">已挖掘土塊：</span>
+                <span id="stats-soil-count" class="stat-value">0</span>
+            </div>
+            <div class="stat-row">
+                <span class="stat-label">土資源：</span>
+                <span id="stats-soil-resource" class="stat-value">0</span>
+            </div>
+            <div class="stat-row">
+                <span class="stat-label">挖掘效率：</span>
+                <span id="stats-efficiency" class="stat-value">0%</span>
+            </div>
+        </div>
+        
+        <div id="help-window">
+            <div id="help-header">
+                <div id="help-title">遊戲幫助</div>
+                <button id="close-help" aria-label="關閉幫助視窗">&times;</button>
+            </div>
+            <div class="help-content">
+                <div class="help-item">1. <span class="key">點擊地面</span> 召喚螞蟻</div>
+                <div class="help-item">2. 螞蟻會自動向地下深處挖掘</div>
+                <div class="help-item">3. 螞蟻會自動挖掘土塊並帶到地面</div>
+                <div class="help-item">4. 土塊球在地面會立即轉化為土資源</div>
+                <div class="help-item">5. 使用 <span class="key">S</span> 鍵快速顯示/隱藏統計</div>
+                <div class="help-item">6. 使用 <span class="key">H</span> 鍵快速顯示/隱藏幫助</div>
+                <div class="help-item">7. 螞蟻會主動避開障礙物並尋找土塊挖掘</div>
+            </div>
+        </div>
+        
+        <button id="stats-button">顯示統計</button>
+        <button id="help-button">遊戲幫助</button>
+        
+        <canvas id="game-canvas"></canvas>
+    </div>
+
+    <script>
+        // 遊戲常數定義
+        const SURFACE_RATIO = 0.05;
+        const BLOCK_SIZE = 10;
+        const SURFACE_EPS = 1;
+
+        // 畫布和遊戲區域尺寸
+        let GAME_WIDTH = 0; 
+        let GAME_HEIGHT = 0; 
+        let SURFACE_HEIGHT = 0; 
+
+        // 網格變數
+        let COLS = 0;
+        let ROWS = 0;
+        let soilBlocks = [];
+
+        // 獲取畫布和上下文
+        const canvas = document.getElementById('game-canvas');
+        const ctx = canvas.getContext('2d');
+        
+        // 統計顯示元素
+        const statsAntCount = document.getElementById('stats-ant-count');
+        const statsSoilCount = document.getElementById('stats-soil-count');
+        const statsSoilResource = document.getElementById('stats-soil-resource');
+        const statsEfficiency = document.getElementById('stats-efficiency');
+
+        // 螞蟻物件的陣列
+        let ants = [];
+        let antIdCounter = 0; 
+
+        // 土塊球物件陣列
+        let soilBalls = [];
+
+        // 統計變數
+        let totalSoilMined = 0;
+        let totalSoilResource = 0;
+        let activeMiningAnts = 0;
+
+        // 視窗控制變數
+        let statsVisible = false;
+        let helpVisible = false;
+
+        /**
+         * 土塊球類別 - 修改：帶到地面立即消失
+         */
+        class SoilBall {
+            constructor(x, y) {
+                this.x = x;
+                this.y = y;
+                this.size = BLOCK_SIZE / 2;
+                this.color = '#8B4513';
+                this.speed = 1;
+                this.carrierAntId = null;
+                this.createdAt = Date.now();
+                this.lifespan = 3000; // 最多存在3秒
+            }
+
+            update() {
+                // 檢查是否超時（防止卡住）
+                if (Date.now() - this.createdAt > this.lifespan) {
+                    this.convertToResource();
+                    return;
+                }
+
+                // 如果有 carrier，跟隨 carrier 的位置
+                if (this.carrierAntId !== null) {
+                    const carrier = ants.find(ant => ant.id === this.carrierAntId);
+                    if (carrier) {
+                        this.x = carrier.x;
+                        this.y = carrier.y - carrier.size - 2;
+                        
+                        // 如果 carrier 在地面，立即轉化為資源
+                        if (carrier.y <= SURFACE_HEIGHT + carrier.size) {
+                            this.convertToResource();
+                            return;
+                        }
+                    } else {
+                        // carrier 不存在，放下
+                        this.carrierAntId = null;
+                    }
+                }
+            }
+
+            convertToResource() {
+                // 增加土資源
+                totalSoilResource++;
+
+                // 從土塊球陣列中移除
+                const index = soilBalls.indexOf(this);
+                if (index > -1) {
+                    soilBalls.splice(index, 1);
+                }
+            }
+
+            draw() {
+                // 如果沒有 carrier，不繪製（土塊球已消失）
+                if (this.carrierAntId === null) return;
+                
+                ctx.fillStyle = this.color;
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+                ctx.fill();
+            }
+        }
+
+        /**
+         * 根據座標獲取土塊網格索引（已加上邊界保護）
+         */
+        function getBlockIndex(x, y) {
+            if (y < SURFACE_HEIGHT || y >= GAME_HEIGHT || x < 0 || x >= GAME_WIDTH) {
+                return { r: -1, c: -1 }; 
+            }
+            const c = Math.floor(x / BLOCK_SIZE);
+            const r = Math.floor((y - SURFACE_HEIGHT) / BLOCK_SIZE);
+            const cc = Math.min(Math.max(c, 0), COLS - 1);
+            const rr = Math.min(Math.max(r, 0), ROWS - 1);
+            return { r: rr, c: cc };
+        }
+
+        /**
+         * 檢查指定位置是否有土塊
+         */
+        function hasBlockAt(x, y) {
+            const { r, c } = getBlockIndex(x, y);
+            if (r >= 0 && r < ROWS && c >= 0 && c < COLS) {
+                return soilBlocks[r][c].exists;
+            }
+            return false;
+        }
+
+        /**
+         * 檢查指定位置周圍是否有障礙物
+         */
+        function checkObstacleAround(x, y, radius) {
+            const directions = [
+                {dx: 0, dy: -radius}, // 上
+                {dx: radius, dy: 0},  // 右
+                {dx: 0, dy: radius},  // 下
+                {dx: -radius, dy: 0}, // 左
+                {dx: radius * 0.7, dy: -radius * 0.7}, // 右上
+                {dx: radius * 0.7, dy: radius * 0.7},  // 右下
+                {dx: -radius * 0.7, dy: radius * 0.7}, // 左下
+                {dx: -radius * 0.7, dy: -radius * 0.7}  // 左上
+            ];
+            
+            for (let dir of directions) {
+                if (hasBlockAt(x + dir.dx, y + dir.dy)) {
+                    return true;
+                }
+            }
+            return false;
+        }
+
+        /**
+         * 初始化地底土塊網格
+         */
+        function initializeBlocks() {
+            COLS = Math.floor(GAME_WIDTH / BLOCK_SIZE);
+            ROWS = Math.floor((GAME_HEIGHT - SURFACE_HEIGHT) / BLOCK_SIZE);
+            soilBlocks = [];
+
+            for (let r = 0; r < ROWS; r++) {
+                soilBlocks[r] = [];
+                for (let c = 0; c < COLS; c++) {
+                    soilBlocks[r][c] = {
+                        x: c * BLOCK_SIZE,
+                        y: SURFACE_HEIGHT + r * BLOCK_SIZE,
+                        exists: true,
+                        color: '#964b00'
+                    };
+                }
+            }
+        }
+
+        /**
+         * 初始化/調整畫布尺寸以適應容器
+         */
+        function resizeCanvas() {
+            const container = document.getElementById('game-container');
+            GAME_WIDTH = container.clientWidth;
+            GAME_HEIGHT = container.clientHeight;
+            canvas.width = GAME_WIDTH;
+            canvas.height = GAME_HEIGHT;
+
+            const newSurfaceHeight = GAME_HEIGHT * SURFACE_RATIO;
+
+            // 只有在尚未建立 soilBlocks 時才初始化
+            if (!soilBlocks || soilBlocks.length === 0) {
+                SURFACE_HEIGHT = newSurfaceHeight;
+                initializeBlocks();
+            } else {
+                SURFACE_HEIGHT = newSurfaceHeight;
+            }
+        }
+
+        window.addEventListener('resize', resizeCanvas);
+
+        // 螞蟻類別定義 - 修改：取消蟻后，加強挖掘行為
+        class Ant {
+            constructor(x, y) {
+                this.id = antIdCounter++;
+                this.x = x;
+                this.y = y;
+                this.size = Math.random() * 1.5 + 2.5; 
+                this.speed = Math.random() * 0.8 + 1.2; 
+                this.color = this.getRandomAntColor();
+                
+                // 隨機初始方向（傾向向下）
+                this.angle = Math.PI * 0.5 + (Math.random() - 0.5) * 0.5; 
+                this.maxTurnRate = 0.15;
+
+                // 挖掘相關屬性
+                this.carryingSoil = false;
+                this.diggingCooldown = 0;
+                this.returningToSurface = false;
+                this.digDirection = Math.random() < 0.5 ? -1 : 1;
+                
+                // 避障相關屬性
+                this.obstacleMemory = [];
+                this.obstacleMemorySize = 5;
+                this.lastTurnTime = 0;
+                this.turnCooldown = 10;
+                
+                // 挖掘積極性
+                this.miningAggressiveness = 0.8 + Math.random() * 0.4;
+                this.lastMiningCheck = 0;
+                this.miningCheckCooldown = 5;
+                
+                // 地面停留控制
+                this.groundTime = 0;
+                this.maxGroundTime = 60;
+                
+                // 狀態追蹤
+                this.state = 'exploring'; // exploring, mining, returning
+            }
+
+            getRandomAntColor() {
+                const colors = [
+                    '#333333', '#555555', '#444444', 
+                    '#666666', '#3a3a3a', '#4a4a4a'
+                ];
+                return colors[Math.floor(Math.random() * colors.length)];
+            }
+
+            // 改進的避障算法
+            avoidObstacles() {
+                const checkDistance = this.size * 3;
+                const checkAngles = [0, -Math.PI/4, Math.PI/4, -Math.PI/2, Math.PI/2];
+                
+                let bestAngle = this.angle;
+                let bestScore = -Infinity;
+                
+                // 檢查多個方向
+                for (let angleOffset of checkAngles) {
+                    const testAngle = this.angle + angleOffset;
+                    const testX = this.x + Math.cos(testAngle) * checkDistance;
+                    const testY = this.y + Math.sin(testAngle) * checkDistance;
+                    
+                    // 評分：優先選擇沒有障礙物的方向
+                    let score = 0;
+                    
+                    // 障礙物檢查
+                    if (!hasBlockAt(testX, testY)) {
+                        score += 100;
+                    }
+                    
+                    // 傾向向下挖掘
+                    if (testAngle > Math.PI/4 && testAngle < Math.PI*3/4) {
+                        score += 50;
+                    }
+                    
+                    // 避免重複最近轉向的方向
+                    if (this.obstacleMemory.includes(Math.round(testAngle * 10)/10)) {
+                        score -= 30;
+                    }
+                    
+                    if (score > bestScore) {
+                        bestScore = score;
+                        bestAngle = testAngle;
+                    }
+                }
+                
+                // 記錄轉向
+                this.obstacleMemory.push(Math.round(bestAngle * 10)/10);
+                if (this.obstacleMemory.length > this.obstacleMemorySize) {
+                    this.obstacleMemory.shift();
+                }
+                
+                return bestAngle;
+            }
+
+            // 尋找土塊挖掘
+            findSoilToMine() {
+                const checkRadius = this.size * 4;
+                const angles = 8;
+                
+                for (let i = 0; i < angles; i++) {
+                    const angle = (Math.PI * 2 * i) / angles;
+                    const checkX = this.x + Math.cos(angle) * checkRadius;
+                    const checkY = this.y + Math.sin(angle) * checkRadius;
+                    
+                    if (hasBlockAt(checkX, checkY)) {
+                        // 計算指向土塊的角度
+                        const dx = checkX - this.x;
+                        const dy = checkY - this.y;
+                        return Math.atan2(dy, dx);
+                    }
+                }
+                
+                // 沒找到土塊，隨機探索
+                return this.angle + (Math.random() - 0.5) * this.maxTurnRate * 2;
+            }
+
+            // 改進的路徑尋找函數
+            findPathToSurface() {
+                // 如果已經在地表，直接返回
+                if (this.y <= SURFACE_HEIGHT + this.size + SURFACE_EPS) {
+                    this.returningToSurface = false;
+                    this.carryingSoil = false;
+                    this.state = 'exploring';
+                    
+                    // 釋放土塊球
+                    const soilBallIndex = soilBalls.findIndex(ball => ball.carrierAntId === this.id);
+                    if (soilBallIndex > -1) {
+                        const soilBall = soilBalls[soilBallIndex];
+                        soilBall.convertToResource();
+                    }
+                    
+                    return;
+                }
+
+                // 優先向上移動
+                const upAngle = -Math.PI / 2;
+                const upX = this.x + Math.cos(upAngle) * this.size * 2;
+                const upY = this.y + Math.sin(upAngle) * this.size * 2;
+                
+                if (!hasBlockAt(upX, upY)) {
+                    this.angle = upAngle;
+                    return;
+                }
+                
+                // 上方有障礙，嘗試斜向移動
+                const leftAngle = -Math.PI / 2 - Math.PI / 6;
+                const rightAngle = -Math.PI / 2 + Math.PI / 6;
+                
+                const leftClear = !hasBlockAt(
+                    this.x + Math.cos(leftAngle) * this.size * 2,
+                    this.y + Math.sin(leftAngle) * this.size * 2
+                );
+                
+                const rightClear = !hasBlockAt(
+                    this.x + Math.cos(rightAngle) * this.size * 2,
+                    this.y + Math.sin(rightAngle) * this.size * 2
+                );
+                
+                if (leftClear && rightClear) {
+                    this.angle = Math.random() < 0.5 ? leftAngle : rightAngle;
+                } else if (leftClear) {
+                    this.angle = leftAngle;
+                } else if (rightClear) {
+                    this.angle = rightAngle;
+                } else {
+                    // 兩個方向都有障礙，使用避障算法
+                    this.angle = this.avoidObstacles();
+                }
+            }
+
+            // 更新螞蟻狀態
+            update() {
+                this.diggingCooldown = Math.max(0, this.diggingCooldown - 1);
+                this.lastMiningCheck++;
+                this.lastTurnTime++;
+                
+                // 地面停留計時
+                if (this.y <= SURFACE_HEIGHT + this.size * 2) {
+                    this.groundTime++;
+                    if (this.groundTime > this.maxGroundTime) {
+                        // 強制向下移動
+                        this.angle = Math.PI * 0.5;
+                        this.groundTime = 0;
+                    }
+                } else {
+                    this.groundTime = 0;
+                }
+
+                // 狀態機邏輯
+                switch (this.state) {
+                    case 'exploring':
+                        this.updateExploring();
+                        break;
+                    case 'mining':
+                        this.updateMining();
+                        break;
+                    case 'returning':
+                        this.updateReturning();
+                        break;
+                }
+
+                // 更新位置
+                const vx = Math.cos(this.angle) * this.speed;
+                const vy = Math.sin(this.angle) * this.speed;
+                
+                let nextX = this.x + vx;
+                let nextY = this.y + vy;
+
+                // 邊界檢查
+                nextX = Math.max(this.size, Math.min(GAME_WIDTH - this.size, nextX));
+                nextY = Math.max(SURFACE_HEIGHT - this.size, Math.min(GAME_HEIGHT - this.size, nextY));
+                
+                // 碰撞檢查（加強版）
+                if (hasBlockAt(nextX, nextY) && this.lastTurnTime > this.turnCooldown) {
+                    this.angle = this.avoidObstacles();
+                    this.lastTurnTime = 0;
+                    return;
+                }
+
+                this.x = nextX;
+                this.y = nextY;
+                
+                // 更新攜帶的土塊球位置
+                if (this.carryingSoil) {
+                    const soilBall = soilBalls.find(ball => ball.carrierAntId === this.id);
+                    if (soilBall) {
+                        soilBall.x = this.x;
+                        soilBall.y = this.y - this.size - 2;
+                    }
+                }
+            }
+
+            updateExploring() {
+                // 探索狀態：尋找土塊挖掘
+                
+                // 定期檢查附近是否有土塊
+                if (this.lastMiningCheck > this.miningCheckCooldown) {
+                    const soilAngle = this.findSoilToMine();
+                    const soilDistance = this.size * 4;
+                    const soilX = this.x + Math.cos(soilAngle) * soilDistance;
+                    const soilY = this.y + Math.sin(soilAngle) * soilDistance;
+                    
+                    if (hasBlockAt(soilX, soilY)) {
+                        // 發現土塊，轉向挖掘
+                        this.angle = soilAngle;
+                        this.state = 'mining';
+                        this.lastMiningCheck = 0;
+                        return;
+                    }
+                    
+                    this.lastMiningCheck = 0;
+                }
+                
+                // 隨機探索 + 避障
+                if (Math.random() < 0.02) {
+                    this.angle += (Math.random() - 0.5) * this.maxTurnRate;
+                }
+                
+                // 加強避障
+                if (checkObstacleAround(this.x, this.y, this.size * 2) && this.lastTurnTime > this.turnCooldown) {
+                    this.angle = this.avoidObstacles();
+                    this.lastTurnTime = 0;
+                }
+                
+                // 傾向向下挖掘
+                if (Math.random() < 0.1 && this.y < GAME_HEIGHT * 0.8) {
+                    this.angle = Math.PI * 0.5 + (Math.random() - 0.5) * 0.3;
+                }
+            }
+
+            updateMining() {
+                // 挖掘狀態：嘗試挖掘前方的土塊
+                
+                if (this.diggingCooldown === 0) {
+                    const checkDistance = this.size + 2;
+                    const checkX = this.x + Math.cos(this.angle) * checkDistance;
+                    const checkY = this.y + Math.sin(this.angle) * checkDistance;
+                    
+                    const { r, c } = getBlockIndex(checkX, checkY);
+
+                    if (r >= 0 && r < ROWS && c >= 0 && c < COLS && soilBlocks[r][c].exists) {
+                        // 挖掘土塊
+                        soilBlocks[r][c].exists = false;
+                        totalSoilMined++;
+
+                        // 創建土塊球
+                        const soilBall = new SoilBall(this.x, this.y);
+                        soilBall.carrierAntId = this.id;
+                        soilBalls.push(soilBall);
+
+                        // 設置螞蟻狀態
+                        this.carryingSoil = true;
+                        this.returningToSurface = true;
+                        this.state = 'returning';
+                        this.diggingCooldown = 30;
+
+                        // 開始尋找返回地表的路径
+                        this.findPathToSurface();
+                    } else {
+                        // 前方沒有土塊，返回探索狀態
+                        this.state = 'exploring';
+                    }
+                }
+            }
+
+            updateReturning() {
+                // 返回狀態：攜帶土塊返回地表
+                this.findPathToSurface();
+                
+                // 如果已經在地表，轉換為探索狀態
+                if (this.y <= SURFACE_HEIGHT + this.size + SURFACE_EPS) {
+                    this.state = 'exploring';
+                    this.carryingSoil = false;
+                    this.returningToSurface = false;
+                }
+            }
+
+            draw() {
+                ctx.fillStyle = this.color;
+
+                // 1. 繪製身體
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+                ctx.fill();
+
+                // 2. 繪製頭部
+                const headSize = this.size * 0.6;
+                const headOffsetX = Math.cos(this.angle) * (this.size + headSize * 0.5);
+                const headOffsetY = Math.sin(this.angle) * (this.size + headSize * 0.5);
+                const headX = this.x + headOffsetX;
+                const headY = this.y + headOffsetY;
+
+                ctx.beginPath();
+                ctx.arc(headX, headY, headSize, 0, Math.PI * 2);
+                ctx.fill();
+
+                // 3. 繪製觸角
+                ctx.strokeStyle = this.color;
+                ctx.lineWidth = 1;
+                const antennaLength = this.size * 1.5;
+                const antennaAngleOffset = Math.PI / 6;
+
+                const ant1Angle = this.angle - antennaAngleOffset;
+                ctx.beginPath();
+                ctx.moveTo(headX, headY);
+                ctx.lineTo(
+                    headX + Math.cos(ant1Angle) * antennaLength,
+                    headY + Math.sin(ant1Angle) * antennaLength
+                );
+                ctx.stroke();
+
+                const ant2Angle = this.angle + antennaAngleOffset;
+                ctx.beginPath();
+                ctx.moveTo(headX, headY);
+                ctx.lineTo(
+                    headX + Math.cos(ant2Angle) * antennaLength,
+                    headY + Math.sin(ant2Angle) * antennaLength
+                );
+                ctx.stroke();
+
+                // 4. 如果攜帶土塊，繪製一個小圓圈表示
+                if (this.carryingSoil) {
+                    ctx.fillStyle = '#8B4513';
+                    ctx.beginPath();
+                    ctx.arc(this.x, this.y - this.size - 2, 3, 0, Math.PI * 2);
+                    ctx.fill();
+                }
+                
+                // 5. 繪製狀態指示器（調試用）
+                /*
+                ctx.fillStyle = this.state === 'exploring' ? 'green' : 
+                               this.state === 'mining' ? 'yellow' : 'red';
+                ctx.beginPath();
+                ctx.arc(this.x, this.y + this.size + 3, 2, 0, Math.PI * 2);
+                ctx.fill();
+                */
+            }
+        }
+
+        /**
+         * 繪製所有存在的土塊
+         */
+        function drawBlocks() {
+            for (let r = 0; r < ROWS; r++) {
+                for (let c = 0; c < COLS; c++) {
+                    const block = soilBlocks[r][c];
+                    if (block.exists) {
+                        ctx.fillStyle = block.color;
+                        ctx.fillRect(block.x, block.y, BLOCK_SIZE, BLOCK_SIZE);
+
+                        ctx.strokeStyle = 'rgba(0, 0, 0, 0.15)'; 
+                        ctx.lineWidth = 0.5;
+                        ctx.strokeRect(block.x, block.y, BLOCK_SIZE, BLOCK_SIZE);
+                    }
+                }
+            }
+        }
+
+        /**
+         * 繪製所有土塊球
+         */
+        function drawSoilBalls() {
+            for (let i = soilBalls.length - 1; i >= 0; i--) {
+                soilBalls[i].update();
+                soilBalls[i].draw();
+            }
+        }
+
+        /**
+         * 更新統計視窗內容
+         */
+        function updateStats() {
+            // 計算挖掘效率
+            activeMiningAnts = ants.filter(ant => ant.state === 'mining' || ant.state === 'returning').length;
+            const efficiency = ants.length > 0 ? Math.round((activeMiningAnts / ants.length) * 100) : 0;
+            
+            // 更新統計視窗內容
+            statsAntCount.textContent = ants.length;
+            statsSoilCount.textContent = totalSoilMined;
+            statsSoilResource.textContent = totalSoilResource;
+            statsEfficiency.textContent = `${efficiency}%`;
+            
+            // 根據效率改變顏色
+            if (efficiency >= 70) {
+                statsEfficiency.style.color = "#4CAF50";
+            } else if (efficiency >= 40) {
+                statsEfficiency.style.color = "#FFC107";
+            } else {
+                statsEfficiency.style.color = "#F44336";
+            }
+        }
+
+        /**
+         * 切換統計視窗顯示
+         */
+        function toggleStats() {
+            const statsWindow = document.getElementById('stats-window');
+            const statsButton = document.getElementById('stats-button');
+            
+            if (statsVisible) {
+                statsWindow.style.display = 'none';
+                statsButton.textContent = '顯示統計';
+                statsVisible = false;
+            } else {
+                statsWindow.style.display = 'block';
+                statsButton.textContent = '隱藏統計';
+                statsVisible = true;
+            }
+        }
+
+        /**
+         * 切換幫助視窗顯示
+         */
+        function toggleHelp() {
+            const helpWindow = document.getElementById('help-window');
+            const helpButton = document.getElementById('help-button');
+            
+            if (helpVisible) {
+                helpWindow.style.display = 'none';
+                helpButton.textContent = '遊戲幫助';
+                helpVisible = false;
+            } else {
+                helpWindow.style.display = 'block';
+                helpButton.textContent = '隱藏幫助';
+                helpVisible = true;
+            }
+        }
+
+        /**
+         * 遊戲主迴圈
+         */
+        function gameLoop() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            // 1. 地底背景與土塊
+            ctx.fillStyle = '#d2b48c';
+            ctx.fillRect(0, SURFACE_HEIGHT, GAME_WIDTH, GAME_HEIGHT - SURFACE_HEIGHT);
+            drawBlocks();
+
+            // 2. 地表背景
+            ctx.fillStyle = '#8bc34a';
+            ctx.fillRect(0, 0, GAME_WIDTH, SURFACE_HEIGHT);
+
+            // 3. 分隔線
+            ctx.strokeStyle = '#6d4c41';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.moveTo(0, SURFACE_HEIGHT);
+            ctx.lineTo(GAME_WIDTH, SURFACE_HEIGHT);
+            ctx.stroke();
+
+            // 4. soilBalls（放在地表之上）
+            drawSoilBalls();
+
+            // 5. 更新並繪製螞蟻
+            for (let i = 0; i < ants.length; i++) {
+                const ant = ants[i];
+                ant.update();
+                ant.draw();
+            }
+
+            // 更新統計資料
+            updateStats();
+
+            requestAnimationFrame(gameLoop);
+        }
+
+        /**
+         * 統一取得事件座標的 helper
+         */
+        function getEventPos(event) {
+            const rect = canvas.getBoundingClientRect();
+            if (event.touches && event.touches.length > 0) {
+                return {
+                    x: event.touches[0].clientX - rect.left,
+                    y: event.touches[0].clientY - rect.top
+                };
+            } else if (event.clientX !== undefined) {
+                return {
+                    x: event.clientX - rect.left,
+                    y: event.clientY - rect.top
+                };
+            }
+            return null;
+        }
+
+        /**
+         * 處理滑鼠點擊事件
+         */
+        function handleInteraction(event) {
+            const pos = getEventPos(event);
+            if (!pos) return;
+            let x = pos.x;
+            let y = pos.y;
+
+            if (x >= 0 && x <= GAME_WIDTH && y >= 0 && y <= GAME_HEIGHT) {
+                const antSize = Math.random() * 1.5 + 2.5;
+
+                let spawnY = y;
+                // 確保初始位置至少在地表線
+                if (spawnY < SURFACE_HEIGHT) {
+                    spawnY = SURFACE_HEIGHT - antSize; 
+                }
+                spawnY = Math.min(spawnY, GAME_HEIGHT - antSize);
+
+                const newAnt = new Ant(x, spawnY);
+                ants.push(newAnt);
+            }
+        }
+
+        // 監聽畫布點擊事件
+        canvas.addEventListener('mousedown', handleInteraction);
+        canvas.addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            if (e.touches.length > 0) {
+                handleInteraction(e); 
+            }
+        }, { passive: false });
+
+        // 程式啟動點
+        window.onload = function () {
+            resizeCanvas();
+            
+            // 設定按鈕事件
+            document.getElementById('stats-button').addEventListener('click', toggleStats);
+            document.getElementById('help-button').addEventListener('click', toggleHelp);
+            document.getElementById('close-stats').addEventListener('click', toggleStats);
+            document.getElementById('close-help').addEventListener('click', toggleHelp);
+            
+            // 鍵盤快捷鍵
+            document.addEventListener('keydown', (e) => {
+                // S 鍵切換統計視窗
+                if (e.key === 's' || e.key === 'S') {
+                    toggleStats();
+                    e.preventDefault();
+                }
+                // H 鍵切換幫助視窗
+                if (e.key === 'h' || e.key === 'H') {
+                    toggleHelp();
+                    e.preventDefault();
+                }
+            });
+            
+            gameLoop();
+        }
+    </script>
+</body>
+</html>

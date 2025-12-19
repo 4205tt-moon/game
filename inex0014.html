@@ -1,0 +1,793 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>四色方塊爭霸戰 - 隨機基地數據修改版</title>
+  <style>
+    /* 重置所有元素的樣式 */
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    }
+    
+    /* 主體樣式 */
+    body {
+      background: linear-gradient(135deg, #1a1a2e, #16213e); /* 深藍色漸變背景 */
+      color: #fff;
+      min-height: 100vh;
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      overflow-x: hidden;
+    }
+    
+    /* 主容器樣式 */
+    .container {
+      max-width: 1000px;
+      width: 100%;
+      text-align: center;
+    }
+    
+    /* 頁首樣式 */
+    header {
+      padding: 20px;
+      margin-bottom: 20px;
+      background: rgba(0, 0, 0, 0.4); /* 半透明黑色背景 */
+      border-radius: 15px;
+      box-shadow: 0 5px 15px rgba(0, 0, 0, 0.5); /* 陰影效果 */
+    }
+    
+    /* 主標題樣式 */
+    h1 {
+      font-size: 2.8rem;
+      margin-bottom: 10px;
+      color: #ffcc00; /* 金色文字 */
+      text-shadow: 0 0 10px rgba(255, 204, 0, 0.5),
+                   0 0 20px rgba(255, 204, 0, 0.3); /* 發光效果 */
+    }
+    
+    /* 副標題樣式 */
+    .subtitle {
+      font-size: 1.2rem;
+      color: #aaa;
+      margin-bottom: 20px;
+    }
+    
+    /* 遊戲區域樣式 */
+    .game-area {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 20px;
+      margin-bottom: 20px;
+    }
+    
+    /* 畫布容器樣式 */
+    .canvas-container {
+      flex: 1;
+      min-width: 300px;
+      background: rgba(0, 0, 0, 0.3); /* 半透明背景 */
+      border-radius: 10px;
+      padding: 15px;
+      box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+      position: relative;
+    }
+    
+    /* 畫布樣式 */
+    canvas {
+      border: 2px solid #444;
+      background-color: #111;
+      border-radius: 5px;
+      display: none; /* 初始隱藏 */
+      width: 100%;
+      max-width: 600px;
+    }
+    
+    /* 統計面板樣式 */
+    .stats-panel {
+      flex: 0 0 300px;
+      background: rgba(0, 0, 0, 0.3);
+      border-radius: 10px;
+      padding: 15px;
+      box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+      text-align: left;
+    }
+    
+    /* 統計面板標題樣式 */
+    .stats-panel h2 {
+      text-align: center;
+      margin-bottom: 15px;
+      color: #4dccbd; /* 青綠色 */
+      border-bottom: 2px solid #4dccbd;
+      padding-bottom: 5px;
+    }
+    
+    /* 陣營樣式 */
+    .faction {
+      margin-bottom: 15px;
+      padding: 10px;
+      border-radius: 8px;
+      background: rgba(255, 255, 255, 0.1); /* 半透明白色背景 */
+    }
+    
+    /* 各陣營左邊框顏色 */
+    .faction.red { border-left: 4px solid #ff4d4d; }
+    .faction.blue { border-left: 4px solid #4da6ff; }
+    .faction.green { border-left: 4px solid #4dff88; }
+    .faction.yellow { border-left: 4px solid #ffcc00; }
+    
+    /* 陣營標頭樣式 */
+    .faction-header {
+      display: flex;
+      align-items: center;
+      margin-bottom: 5px;
+    }
+    
+    /* 陣營顏色標識樣式 */
+    .faction-color {
+      width: 20px;
+      height: 20px;
+      border-radius: 50%;
+      margin-right: 10px;
+    }
+    
+    /* 陣營名稱樣式 */
+    .faction-name {
+      font-weight: bold;
+      font-size: 1.1rem;
+    }
+    
+    /* 陣營統計數據樣式 */
+    .faction-stats {
+      display: flex;
+      justify-content: space-between;
+      font-size: 0.9rem;
+      color: #ccc;
+      margin-bottom: 8px;
+    }
+    
+    /* 陣營控制條樣式 */
+    .faction-control {
+      display: flex;
+      align-items: center;
+      margin-top: 5px;
+    }
+    
+    /* 控制條背景樣式 */
+    .control-bar {
+      flex: 1;
+      height: 10px;
+      background: #333;
+      border-radius: 5px;
+      margin-left: 10px;
+      overflow: hidden;
+    }
+    
+    /* 控制條填充樣式 */
+    .control-fill {
+      height: 100%;
+      border-radius: 5px;
+      transition: width 0.3s ease; /* 平滑過渡效果 */
+    }
+    
+    /* 控制數值樣式 */
+    .control-value {
+      width: 40px;
+      text-align: right;
+      font-weight: bold;
+    }
+    
+    /* 各陣營控制條顏色 */
+    .red .control-fill { background: #ff4d4d; }
+    .blue .control-fill { background: #4da6ff; }
+    .green .control-fill { background: #4dff88; }
+    .yellow .control-fill { background: #ffcc00; }
+    
+    /* 控制區域樣式 */
+    .controls {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      margin-top: 20px;
+      width: 100%;
+      max-width: 600px;
+      background: rgba(0, 0, 0, 0.3);
+      border-radius: 10px;
+      padding: 15px;
+      box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+    }
+    
+    /* 控制組樣式 */
+    .control-group {
+      display: flex;
+      flex-direction: column;
+      width: 100%;
+      margin-bottom: 15px;
+    }
+    
+    /* 控制標籤樣式 */
+    .control-label {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 8px;
+      font-size: 1.1rem;
+      color: #4dccbd;
+    }
+    
+    /* 速度滑塊樣式 */
+    .speed-slider {
+      width: 100%;
+      height: 25px;
+      -webkit-appearance: none;
+      background: #333;
+      border-radius: 12px;
+      outline: none;
+    }
+    
+    /* 速度滑塊拇指樣式 */
+    .speed-slider::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      width: 30px;
+      height: 30px;
+      border-radius: 50%;
+      background: #ffcc00;
+      cursor: pointer;
+      box-shadow: 0 0 10px rgba(255, 204, 0, 0.5);
+    }
+    
+    /* 速度指示器樣式 */
+    .speed-indicators {
+      display: flex;
+      justify-content: space-between;
+      width: 100%;
+      margin-top: 5px;
+      color: #aaa;
+    }
+    
+    .speed-indicators span {
+      font-size: 0.9rem;
+    }
+    
+    /* 開始按鈕樣式 */
+    #startButton {
+      background: linear-gradient(to right, #ff416c, #ff4b2b); /* 紅色漸變 */
+      color: white;
+      border: none;
+      padding: 15px 40px;
+      font-size: 1.2rem;
+      border-radius: 50px;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      margin-bottom: 15px;
+      box-shadow: 0 5px 15px rgba(255, 75, 43, 0.4);
+      width: 100%;
+      max-width: 300px;
+    }
+    
+    /* 開始按鈕懸停效果 */
+    #startButton:hover {
+      transform: translateY(-3px);
+      box-shadow: 0 8px 20px rgba(255, 75, 43, 0.6);
+    }
+    
+    /* 開始按鈕按下效果 */
+    #startButton:active {
+      transform: translateY(1px);
+    }
+    
+    /* 遊戲資訊樣式 */
+    .game-info {
+      background: rgba(0, 0, 0, 0.3);
+      border-radius: 10px;
+      padding: 15px;
+      margin-top: 20px;
+      text-align: left;
+      box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+      width: 100%;
+      max-width: 600px;
+    }
+    
+    .game-info h3 {
+      color: #4dccbd;
+      margin-bottom: 10px;
+      text-align: center;
+    }
+    
+    .game-info ul {
+      padding-left: 20px;
+    }
+    
+    .game-info li {
+      margin-bottom: 8px;
+      color: #ddd;
+    }
+    
+    /* 彈窗覆蓋層樣式 */
+    .modal-overlay {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.8); /* 半透明黑色背景 */
+      z-index: 1000;
+      justify-content: center;
+      align-items: center;
+      backdrop-filter: blur(5px); /* 背景模糊效果 */
+    }
+    
+    /* 彈窗內容樣式 */
+    .modal-content {
+      background: linear-gradient(135deg, #1a1a2e, #16213e);
+      border-radius: 20px;
+      padding: 40px;
+      text-align: center;
+      box-shadow: 0 0 50px rgba(255, 215, 0, 0.7); /* 金色陰影 */
+      max-width: 500px;
+      width: 90%;
+      border: 2px solid #ffcc00;
+      position: relative;
+      animation: modalAppear 0.5s ease-out; /* 彈出動畫 */
+    }
+    
+    /* 彈窗出現動畫 */
+    @keyframes modalAppear {
+      0% { transform: scale(0.8); opacity: 0; }
+      100% { transform: scale(1); opacity: 1; }
+    }
+    
+    /* 彈窗標題樣式 */
+    .modal-title {
+      font-size: 2.5rem;
+      margin-bottom: 20px;
+      color: #ffcc00;
+      text-shadow: 0 0 15px rgba(255, 204, 0, 0.7);
+    }
+    
+    /* 彈窗副標題樣式 */
+    .modal-subtitle {
+      font-size: 1.2rem;
+      margin-bottom: 30px;
+      color: #ddd;
+    }
+    
+    /* 彈窗按鈕容器樣式 */
+    .modal-buttons {
+      display: flex;
+      justify-content: center;
+      gap: 20px;
+      margin-top: 30px;
+    }
+    
+    /* 彈窗按鈕樣式 */
+    .modal-button {
+      padding: 12px 30px;
+      font-size: 1.1rem;
+      border-radius: 50px;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      border: none;
+      font-weight: bold;
+    }
+    
+    /* 主要按鈕樣式 */
+    .modal-button.primary {
+      background: linear-gradient(to right, #00b09b, #96c93d); /* 綠色漸變 */
+      color: white;
+      box-shadow: 0 5px 15px rgba(0, 176, 155, 0.4);
+    }
+    
+    .modal-button.primary:hover {
+      transform: translateY(-3px);
+      box-shadow: 0 8px 20px rgba(0, 176, 155, 0.6);
+    }
+    
+    /* 次要按鈕樣式 */
+    .modal-button.secondary {
+      background: linear-gradient(to right, #ff416c, #ff4b2b); /* 紅色漸變 */
+      color: white;
+      box-shadow: 0 5px 15px rgba(255, 75, 43, 0.4);
+    }
+    
+    .modal-button.secondary:hover {
+      transform: translateY(-3px);
+      box-shadow: 0 8px 20px rgba(255, 75, 43, 0.6);
+    }
+    
+    /* 彩色紙屑樣式 */
+    .confetti {
+      position: absolute;
+      width: 10px;
+      height: 10px;
+      background: #ffcc00;
+      opacity: 0.8;
+      border-radius: 50%;
+      animation: confettiFall 5s linear forwards; /* 紙屑落下動畫 */
+    }
+    
+    /* 紙屑落下動畫 */
+    @keyframes confettiFall {
+      0% { transform: translateY(-100px) rotate(0deg); opacity: 1; }
+      100% { transform: translateY(1000px) rotate(720deg); opacity: 0; }
+    }
+    
+    /* 特殊方塊樣式 */
+    .special-tile {
+      position: absolute;
+      width: 12px;
+      height: 12px;
+      background: gold;
+      border-radius: 50%;
+      box-shadow: 0 0 10px gold;
+      pointer-events: none;
+      z-index: 10;
+      opacity: 0.7;
+    }
+    
+    /* 戰鬥特效樣式 */
+    .battle-effect {
+      position: absolute;
+      width: 20px;
+      height: 20px;
+      border-radius: 50%;
+      background: rgba(255, 0, 0, 0.6);
+      box-shadow: 0 0 15px rgba(255, 0, 0, 0.8);
+      pointer-events: none;
+      z-index: 5;
+      animation: explode 0.5s forwards; /* 爆炸動畫 */
+    }
+    
+    /* 爆炸動畫 */
+    @keyframes explode {
+      0% { transform: scale(0.5); opacity: 1; }
+      100% { transform: scale(2); opacity: 0; }
+    }
+    
+    /* 響應式設計 - 平板和手機 */
+    @media (max-width: 768px) {
+      .game-area {
+        flex-direction: column;
+      }
+      
+      .stats-panel {
+        width: 100%;
+      }
+      
+      h1 {
+        font-size: 2.2rem;
+      }
+      
+      .modal-content {
+        padding: 25px;
+      }
+      
+      .modal-title {
+        font-size: 2rem;
+      }
+      
+      .modal-buttons {
+        flex-direction: column;
+        gap: 15px;
+      }
+    }
+    
+    /* 目標資訊面板樣式 */
+    .target-info {
+      position: absolute;
+      top: 20px;
+      right: 20px;
+      background: rgba(0, 0, 0, 0.7);
+      border-radius: 10px;
+      padding: 15px;
+      max-width: 250px;
+      z-index: 20;
+      display: none;
+    }
+    
+    .target-info h3 {
+      color: #ffcc00;
+      margin-bottom: 10px;
+    }
+    
+    .target-info-item {
+      margin-bottom: 8px;
+      display: flex;
+      justify-content: space-between;
+    }
+    
+    .target-info-label {
+      font-weight: bold;
+      color: #4dccbd;
+    }
+    
+    .target-info-value {
+      color: #fff;
+    }
+    
+    /* 目標資訊切換按鈕樣式 */
+    #toggleTargetInfo {
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      background: rgba(0, 0, 0, 0.5);
+      color: white;
+      border: none;
+      border-radius: 5px;
+      padding: 5px 10px;
+      cursor: pointer;
+      z-index: 30;
+    }
+    
+    /* 基地血量顯示樣式 */
+    .base-health {
+      margin-top: 10px;
+      padding-top: 10px;
+      border-top: 1px solid rgba(255, 255, 255, 0.1);
+    }
+    
+    /* 血量條背景樣式 */
+    .health-bar {
+      height: 10px;
+      background: #333;
+      border-radius: 5px;
+      margin-top: 5px;
+      overflow: hidden;
+      position: relative;
+    }
+    
+    /* 血量填充樣式 */
+    .health-fill {
+      height: 100%;
+      border-radius: 5px;
+      transition: width 0.5s ease;
+    }
+    
+    /* 血量文字樣式 */
+    .health-text {
+      display: flex;
+      justify-content: space-between;
+      margin-top: 3px;
+      font-size: 0.85rem;
+      color: #ccc;
+    }
+    
+    .health-value {
+      font-weight: bold;
+    }
+    
+    /* 各陣營血量條顏色 */
+    .red .health-fill { background: linear-gradient(to right, #ff4d4d, #ff9999); }
+    .blue .health-fill { background: linear-gradient(to right, #4da6ff, #99ccff); }
+    .green .health-fill { background: linear-gradient(to right, #4dff88, #99ffbb); }
+    .yellow .health-fill { background: linear-gradient(to right, #ffcc00, #ffdd66); }
+    
+    /* 低血量警告效果 */
+    .low-health {
+      animation: pulse 1s infinite alternate; /* 脈衝動畫 */
+    }
+    
+    /* 脈衝動畫 */
+    @keyframes pulse {
+      from { opacity: 1; }
+      to { opacity: 0.6; }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1>四色方塊爭霸戰</h1>
+      <div class="subtitle">隨機基地位置版 - 每場遊戲基地位置隨機分配！</div>
+      <div style="margin-top: 15px; color: #aaa; font-size: 0.9rem; text-align: center;">
+        著作權所有☪修改年份日期：2025年10月16日☪版本號：10版☪本網站由☪廖月月☪編輯維護
+      </div>
+    </header>
+    
+    <div class="game-area">
+      <div class="canvas-container">
+        <canvas id="gameCanvas" width="600" height="600"></canvas>
+        <button id="toggleTargetInfo">顯示目標資訊</button>
+        <div class="target-info" id="targetInfo">
+          <h3>目標分配策略</h3>
+          <div class="target-info-item">
+            <span class="target-info-label">優先級:</span>
+            <span class="target-info-value">空白特殊方塊 > 敵方單位 > 敵方特殊方塊 > 敵方基地</span>
+          </div>
+          <div class="target-info-item">
+            <span class="target-info-label">分散策略:</span>
+            <span class="target-info-value">單位會分散到不同目標</span>
+          </div>
+          <div class="target-info-item">
+            <span class="target-info-label">目標距離:</span>
+            <span class="target-info-value">選擇最近3個目標中的一個</span>
+          </div>
+          <div class="target-info-item">
+            <span class="target-info-label">目標更新:</span>
+            <span class="target-info-value">每5秒重新評估目標</span>
+          </div>
+        </div>
+      </div>
+      
+      <!-- 統計面板 -->
+      <div class="stats-panel">
+        <h2>陣營狀態監控</h2>
+        <!-- 紅色陣營 -->
+        <div class="faction red">
+          <div class="faction-header">
+            <div class="faction-color" style="background: #ff4d4d;"></div>
+            <div class="faction-name">紅色陣營</div>
+          </div>
+          <div class="faction-stats">
+            <span>生命: 200</span>
+            <span>攻擊: 40</span>
+            <span>生成速度: 慢</span>
+          </div>
+          <div class="faction-control">
+            <span>控制:</span>
+            <div class="control-bar">
+              <div class="control-fill" id="red-control" style="width: 0%"></div>
+            </div>
+            <div class="control-value" id="red-value">0</div>
+          </div>
+          <div class="base-health">
+            <div class="health-text">
+              <span>基地血量:</span>
+              <span class="health-value" id="red-health">1000/1000</span>
+            </div>
+            <div class="health-bar">
+              <div class="health-fill" id="red-health-bar" style="width: 100%"></div>
+            </div>
+          </div>
+        </div>
+        
+        <!-- 藍色陣營 -->
+        <div class="faction blue">
+          <div class="faction-header">
+            <div class="faction-color" style="background: #4da6ff;"></div>
+            <div class="faction-name">藍色陣營</div>
+          </div>
+          <div class="faction-stats">
+            <span>生命: 200</span>
+            <span>攻擊: 15</span>
+            <span>生成速度: 中</span>
+          </div>
+          <div class="faction-control">
+            <span>控制:</span>
+            <div class="control-bar">
+              <div class="control-fill" id="blue-control" style="width: 0%"></div>
+            </div>
+            <div class="control-value" id="blue-value">0</div>
+          </div>
+          <div class="base-health">
+            <div class="health-text">
+              <span>基地血量:</span>
+              <span class="health-value" id="blue-health">1000/1000</span>
+            </div>
+            <div class="health-bar">
+              <div class="health-fill" id="blue-health-bar" style="width: 100%"></div>
+            </div>
+          </div>
+        </div>
+        
+        <!-- 綠色陣營 -->
+        <div class="faction green">
+          <div class="faction-header">
+            <div class="faction-color" style="background: #4dff88;"></div>
+            <div class="faction-name">綠色陣營</div>
+          </div>
+          <div class="faction-stats">
+            <span>生命: 100</span>
+            <span>攻擊: 5</span>
+            <span>生成速度: 快</span>
+          </div>
+          <div class="faction-control">
+            <span>控制:</span>
+            <div class="control-bar">
+              <div class="control-fill" id="green-control" style="width: 0%"></div>
+            </div>
+            <div class="control-value" id="green-value">0</div>
+          </div>
+          <div class="base-health">
+            <div class="health-text">
+              <span>基地血量:</span>
+              <span class="health-value" id="green-health">1000/1000</span>
+            </div>
+            <div class="health-bar">
+              <div class="health-fill" id="green-health-bar" style="width: 100%"></div>
+            </div>
+          </div>
+        </div>
+        
+        <!-- 黃色陣營 -->
+        <div class="faction yellow">
+          <div class="faction-header">
+            <div class="faction-color" style="background: #ffcc00;"></div>
+            <div class="faction-name">黃色陣營</div>
+          </div>
+          <div class="faction-stats">
+            <span>生命: 400</span>
+            <span>攻擊: 15</span>
+            <span>生成速度: 慢</span>
+          </div>
+          <div class="faction-control">
+            <span>控制:</span>
+            <div class="control-bar">
+              <div class="control-fill" id="yellow-control" style="width: 0%"></div>
+            </div>
+            <div class="control-value" id="yellow-value">0</div>
+          </div>
+          <div class="base-health">
+            <div class="health-text">
+              <span>基地血量:</span>
+              <span class="health-value" id="yellow-health">1000/1000</span>
+            </div>
+            <div class="health-bar">
+              <div class="health-fill" id="yellow-health-bar" style="width: 100%"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    <!-- 控制區域 -->
+    <div class="controls">
+      <div class="control-group">
+        <div class="control-label">
+          <span>遊戲速度控制</span>
+          <span id="speedValue">1.0x</span>
+        </div>
+        <input type="range" min="1" max="10" value="5" class="speed-slider" id="speedSlider">
+        <div class="speed-indicators">
+          <span>慢</span>
+          <span>正常</span>
+          <span>快</span>
+        </div>
+      </div>
+      <button id="startButton">開始遊戲</button>
+    </div>
+    
+    <!-- 遊戲規則說明 -->
+    <div class="game-info">
+      <h3>遊戲規則與基地位置隨機化</h3>
+      <ul>
+        <li>每場遊戲開始時，四個陣營的基地位置會隨機分配到四個角落</li>
+        <li>每個陣營的基地初始血量為1000點</li>
+        <li>當敵方單位進入基地時，基地會受到持續傷害</li>
+        <li>基地血量低於30%時會閃爍警告</li>
+        <li>如果基地血量歸零，該陣營將被淘汰</li>
+        <li>控制特殊方塊可以為你的陣營生成更多單位並增強基地防禦</li>
+        <li>當所有特殊方塊都被同一陣營控制，或所有其他陣營基地被摧毀，該陣營獲勝</li>
+      </ul>
+    </div>
+    
+    <!-- 彈窗式遊戲結束畫面 -->
+    <div class="modal-overlay" id="gameOverModal">
+      <div class="modal-content">
+        <h2 class="modal-title" id="winnerText">紅色陣營勝利！</h2>
+        <p class="modal-subtitle">恭喜獲勝！你可以選擇重新開始或返回主菜單</p>
+        
+        <div class="modal-buttons">
+          <button class="modal-button primary" id="restartButton">再玩一次</button>
+          <button class="modal-button secondary" id="mainMenuButton">返回主菜單</button>
+        </div>
+        
+        <div style="margin-top: 30px; color: #aaa; font-size: 0.8rem;">
+          版本10版☪編輯維護：☪廖月月☪
+        </div>
+      </div>
+    </div>
+
+    <!-- 頁面底部版權聲明 -->
+    <footer style="margin-top: 30px; padding: 15px; color: #777; font-size: 0.85rem; text-align: center; width: 100%;">
+      著作權所有 © 2025 ☪ 最後修改日期：2025年10月16日 ☪ 版本號：10版 ☪ 本網站由☪廖月月☪編輯維護
+    </footer>
+  </div>
+
+  <!-- 載入外部 JS -->
+  <script src="inex0014.js"></script>
+</body>
+</html>

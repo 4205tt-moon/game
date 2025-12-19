@@ -1,0 +1,1535 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>蜜蜂花園 - 智慧採蜜建造遊戲</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            background: linear-gradient(to bottom, #87CEEB 0%, #98FB98 100%);
+            font-family: 'Inter', sans-serif;
+        }
+
+        #game-container {
+            width: 95vw;
+            max-width: 900px;
+            height: 95vh;
+            max-height: 700px;
+            position: relative;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+            border-radius: 16px;
+            overflow: hidden;
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+        }
+
+        #game-canvas {
+            display: block;
+            width: 100%;
+            height: 100%;
+            background-color: transparent;
+        }
+
+        /* 統計視窗樣式 */
+        #stats-window {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background-color: rgba(255, 255, 255, 0.95);
+            color: #333;
+            border-radius: 12px;
+            padding: 15px;
+            z-index: 20;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+            display: none;
+            min-width: 280px;
+            max-width: 320px;
+            border: 2px solid rgba(255, 215, 0, 0.3);
+        }
+
+        #stats-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+            border-bottom: 2px solid rgba(255, 215, 0, 0.3);
+            padding-bottom: 8px;
+        }
+
+        #stats-title {
+            font-weight: bold;
+            font-size: 1.1rem;
+            color: #FF8C00;
+        }
+
+        #close-stats {
+            background: none;
+            border: none;
+            color: #333;
+            font-size: 1.5rem;
+            cursor: pointer;
+            padding: 0 5px;
+            line-height: 1;
+            transition: color 0.2s;
+        }
+
+        #close-stats:hover {
+            color: #FF8C00;
+        }
+
+        .stat-row {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 8px;
+            font-size: 0.9rem;
+        }
+
+        .stat-label {
+            color: #666;
+        }
+
+        .stat-value {
+            font-weight: bold;
+            color: #333;
+        }
+        
+        /* 策略分組樣式 */
+        .strategy-group {
+            margin-top: 15px;
+            padding-top: 15px;
+            border-top: 1px solid rgba(0, 0, 0, 0.1);
+        }
+        
+        .strategy-title {
+            font-weight: bold;
+            color: #2E8B57;
+            margin-bottom: 8px;
+            font-size: 0.95rem;
+        }
+        
+        .strategy-info {
+            font-size: 0.8rem;
+            color: #666;
+            margin-top: 5px;
+        }
+
+        /* 統計按鈕樣式 */
+        #stats-button {
+            position: absolute;
+            bottom: 15px;
+            right: 15px;
+            background-color: rgba(255, 215, 0, 0.9);
+            color: #333;
+            border: none;
+            border-radius: 10px;
+            padding: 10px 16px;
+            font-size: 0.9rem;
+            font-weight: bold;
+            cursor: pointer;
+            z-index: 10;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+        }
+
+        #stats-button:hover {
+            background-color: rgba(255, 215, 0, 1);
+            transform: translateY(-2px);
+            box-shadow: 0 6px 16px rgba(0, 0, 0, 0.3);
+        }
+
+        /* 幫助視窗樣式 */
+        #help-button {
+            position: absolute;
+            bottom: 15px;
+            left: 15px;
+            background-color: rgba(255, 215, 0, 0.9);
+            color: #333;
+            border: none;
+            border-radius: 10px;
+            padding: 10px 16px;
+            font-size: 0.9rem;
+            font-weight: bold;
+            cursor: pointer;
+            z-index: 10;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+        }
+
+        #help-button:hover {
+            background-color: rgba(255, 215, 0, 1);
+            transform: translateY(-2px);
+            box-shadow: 0 6px 16px rgba(0, 0, 0, 0.3);
+        }
+
+        #help-window {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background-color: rgba(255, 255, 255, 0.98);
+            color: #333;
+            border-radius: 16px;
+            padding: 25px;
+            z-index: 30;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+            display: none;
+            width: 85%;
+            max-width: 500px;
+            border: 2px solid rgba(255, 215, 0, 0.3);
+        }
+
+        #help-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            border-bottom: 2px solid rgba(255, 215, 0, 0.3);
+            padding-bottom: 12px;
+        }
+
+        #help-title {
+            font-weight: bold;
+            font-size: 1.3rem;
+            color: #FF8C00;
+        }
+
+        #close-help {
+            background: none;
+            border: none;
+            color: #333;
+            font-size: 1.8rem;
+            cursor: pointer;
+            padding: 0 8px;
+            line-height: 1;
+            transition: color 0.2s;
+        }
+
+        #close-help:hover {
+            color: #FF8C00;
+        }
+
+        .help-content {
+            line-height: 1.6;
+            font-size: 0.95rem;
+        }
+
+        .help-item {
+            margin-bottom: 10px;
+            color: #444;
+        }
+
+        .key {
+            display: inline-block;
+            background-color: rgba(255, 215, 0, 0.2);
+            padding: 3px 8px;
+            border-radius: 6px;
+            font-family: monospace;
+            font-weight: bold;
+            color: #FF8C00;
+        }
+        
+        .shortcut-section {
+            margin-top: 15px;
+            padding-top: 15px;
+            border-top: 1px solid rgba(0, 0, 0, 0.1);
+        }
+        
+        .shortcut-title {
+            font-weight: bold;
+            color: #2E8B57;
+            margin-bottom: 10px;
+            font-size: 1.05rem;
+        }
+
+        /* 升級按鈕樣式 */
+        #upgrade-button {
+            position: absolute;
+            top: 15px;
+            left: 15px;
+            background-color: rgba(255, 165, 0, 0.9);
+            color: white;
+            border: none;
+            border-radius: 10px;
+            padding: 10px 16px;
+            font-size: 0.9rem;
+            font-weight: bold;
+            cursor: pointer;
+            z-index: 10;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+        }
+
+        #upgrade-button:hover {
+            background-color: rgba(255, 165, 0, 1);
+            transform: translateY(-2px);
+            box-shadow: 0 6px 16px rgba(0, 0, 0, 0.3);
+        }
+
+        #upgrade-button:disabled {
+            background-color: rgba(200, 200, 200, 0.7);
+            cursor: not-allowed;
+            transform: none;
+        }
+    </style>
+</head>
+<body>
+    <div id="game-container">
+        <!-- 統計視窗 (已合併策略顯示) -->
+        <div id="stats-window">
+            <div id="stats-header">
+                <div id="stats-title">花園統計與策略</div>
+                <button id="close-stats" aria-label="關閉統計視窗">&times;</button>
+            </div>
+            <div class="stat-row">
+                <span class="stat-label">蜜蜂數量：</span>
+                <span id="stats-bee-count" class="stat-value">0</span>
+            </div>
+            <div class="stat-row">
+                <span class="stat-label">蜂后：</span>
+                <span id="stats-queen-status" class="stat-value">未召喚</span>
+            </div>
+            <div class="stat-row">
+                <span class="stat-label">花朵數量：</span>
+                <span id="stats-flower-count" class="stat-value">0</span>
+            </div>
+            <div class="stat-row">
+                <span class="stat-label">花蜜收集：</span>
+                <span id="stats-honey-collected" class="stat-value">0</span>
+            </div>
+            <div class="stat-row">
+                <span class="stat-label">蜂巢等級：</span>
+                <span id="stats-hive-level" class="stat-value">1</span>
+            </div>
+            <div class="stat-row">
+                <span class="stat-label">花蜜球數量：</span>
+                <span id="stats-nectar-balls" class="stat-value">0</span>
+            </div>
+            
+            <!-- 策略顯示區域 -->
+            <div class="strategy-group">
+                <div class="strategy-title">採蜜策略設定</div>
+                <div class="stat-row">
+                    <span class="stat-label">分散度：</span>
+                    <span id="strategy-dispersion" class="stat-value">中</span>
+                </div>
+                <div class="stat-row">
+                    <span class="stat-label">採集優先：</span>
+                    <span id="strategy-priority" class="stat-value">花朵負載</span>
+                </div>
+                <div class="stat-row">
+                    <span class="stat-label">蜜蜂分配：</span>
+                    <span id="strategy-assignment" class="stat-value">智慧分配</span>
+                </div>
+                <div class="stat-row">
+                    <span class="stat-label">花朵平均花蜜：</span>
+                    <span id="stats-nectar-per-flower" class="stat-value">0.0</span>
+                </div>
+            </div>
+        </div>
+        
+        <!-- 幫助視窗 -->
+        <div id="help-window">
+            <div id="help-header">
+                <div id="help-title">遊戲幫助</div>
+                <button id="close-help" aria-label="關閉幫助視窗">&times;</button>
+            </div>
+            <div class="help-content">
+                <div class="help-item">1. <span class="key">點擊花朵</span> 召喚蜜蜂</div>
+                <div class="help-item">2. 第一隻蜜蜂為 <span style="color:#FFD700">蜂后</span> (金色)</div>
+                <div class="help-item">3. 工蜂會根據智慧策略分配採集花朵</div>
+                <div class="help-item">4. 蜂后專注於建造和升級蜂巢</div>
+                <div class="help-item">5. 收集花蜜來升級蜂巢，解鎖新區域</div>
+                <div class="help-item">6. 花朵會自然生長和枯萎，保持多樣性</div>
+                <div class="help-item">7. 花朵有不同花蜜產量，會影響採集效率</div>
+                
+                <div class="shortcut-section">
+                    <div class="shortcut-title">鍵盤快捷鍵</div>
+                    <div class="help-item"><span class="key">A</span> 顯示/隱藏統計與策略視窗</div>
+                    <div class="help-item"><span class="key">S</span> 顯示/隱藏幫助視窗</div>
+                    <div class="help-item"><span class="key">D</span> 升級蜂巢</div>
+                    <div class="help-item"><span class="key">1/2/3</span> 切換分散度策略 (低/中/高)</div>
+                    <div class="help-item"><span class="key">Q</span> 優先採集最近花朵 (距離優先)</div>
+                    <div class="help-item"><span class="key">W</span> 優先採集花蜜最多花朵 (花蜜量優先)</div>
+                    <div class="help-item"><span class="key">E</span> 優先採集無人花朵 (負載優先)</div>
+                </div>
+                
+                <div class="shortcut-section">
+                    <div class="shortcut-title">智慧採蜜策略</div>
+                    <div class="help-item">- 蜜蜂會自動分散到不同花朵，避免擁擠</div>
+                    <div class="help-item">- 每朵花有1-3點花蜜，需要多次採集</div>
+                    <div class="help-item">- 花朵被採集後會再生，再生時間隨機</div>
+                    <div class="help-item">- 策略設定會即時影響所有蜜蜂的行為</div>
+                </div>
+            </div>
+        </div>
+        
+        <button id="stats-button">顯示統計(A)</button>
+        <button id="help-button">遊戲幫助(S)</button>
+        <button id="upgrade-button">升級蜂巢(D)</button>
+        
+        <canvas id="game-canvas"></canvas>
+    </div>
+
+    <script>
+        // 遊戲常數定義
+        const FLOWER_SPAWN_RATIO = 0.15;
+        const BEE_SIZE = 4;
+        const FLOWER_SIZE = 12;
+        const NECTAR_BALL_SIZE = 3;
+        
+        // 花蜜相關常數
+        const MIN_FLOWER_NECTAR = 1;
+        const MAX_FLOWER_NECTAR = 3;
+        const NECTAR_REGEN_MIN = 200;
+        const NECTAR_REGEN_MAX = 400;
+
+        // 畫布和遊戲區域尺寸
+        let GAME_WIDTH = 0;
+        let GAME_HEIGHT = 0;
+
+        // 獲取畫布和上下文
+        const canvas = document.getElementById('game-canvas');
+        const ctx = canvas.getContext('2d');
+        
+        // 統計顯示元素
+        const statsBeeCount = document.getElementById('stats-bee-count');
+        const statsQueenStatus = document.getElementById('stats-queen-status');
+        const statsFlowerCount = document.getElementById('stats-flower-count');
+        const statsHoneyCollected = document.getElementById('stats-honey-collected');
+        const statsHiveLevel = document.getElementById('stats-hive-level');
+        const statsNectarBalls = document.getElementById('stats-nectar-balls');
+        const statsNectarPerFlower = document.getElementById('stats-nectar-per-flower');
+        
+        // 策略顯示元素
+        const strategyDispersion = document.getElementById('strategy-dispersion');
+        const strategyPriority = document.getElementById('strategy-priority');
+        const strategyAssignment = document.getElementById('strategy-assignment');
+
+        // 遊戲對象陣列
+        let bees = [];
+        let flowers = [];
+        let nectarBalls = [];
+        let hiveCells = [];
+        
+        // 統計變數
+        let totalHoneyCollected = 0;
+        let hiveLevel = 1;
+        let beeIdCounter = 0;
+        let flowerIdCounter = 0;
+        
+        // 花朵目標追蹤 - 追蹤每朵花有多少蜜蜂正在前往
+        let flowerTargetCount = new Map();
+
+        // 視窗控制變數
+        let statsVisible = false;
+        let helpVisible = false;
+        
+        // 策略設定
+        let strategySettings = {
+            // 分散度設定 (低: 蜜蜂傾向聚集, 中: 均衡分散, 高: 強制分散)
+            dispersion: 'medium',
+            
+            // 採集優先級 (distance: 距離優先, nectar: 花蜜量優先, load: 花朵負載優先)
+            priority: 'load',
+            
+            // 蜜蜂分配模式 (random: 隨機分配, balanced: 均衡分配, smart: 智慧分配)
+            assignment: 'smart',
+        };
+
+        /**
+         * 蜜蜂類別 - 增強版，加入智慧目標分配
+         */
+        class Bee {
+            constructor(x, y, isQueen = false) {
+                this.id = beeIdCounter++;
+                this.x = x;
+                this.y = y;
+                this.isQueen = isQueen;
+                this.size = isQueen ? 6 : BEE_SIZE;
+                this.speed = isQueen ? 0.6 : (Math.random() * 0.5 + 1.2);
+                this.color = isQueen ? '#FFD700' : '#FFA500';
+                this.wingColor = isQueen ? '#FFFACD' : '#F0F8FF';
+
+                this.angle = Math.random() * 2 * Math.PI;
+                this.maxTurnRate = isQueen ? 0.03 : 0.15;
+
+                // 採集相關屬性
+                this.carryingNectar = false;
+                this.targetFlower = null;
+                this.returningToHive = false;
+                this.collectionCooldown = 0;
+                
+                // 目標評估屬性
+                this.lastTargetEvaluation = 0;
+                this.targetEvaluationInterval = 150 + Math.random() * 300; // 每個蜜蜂有不同的評估間隔
+
+                // 翅膀動畫
+                this.wingPhase = Math.random() * Math.PI * 2;
+                this.wingSpeed = 0.8;
+                
+                // 如果是一般蜜蜂，初始隨機目標
+                if (!this.isQueen) {
+                    this.lastTargetEvaluation = Math.random() * 100; // 隨機初始評估時間
+                }
+            }
+
+            /**
+             * 智慧尋找最佳花朵
+             * 參考方塊遊戲的目標分配策略
+             */
+            findBestFlower(frameCount) {
+                if (flowers.length === 0) return null;
+                
+                // 只在需要時重新評估目標
+                if (frameCount - this.lastTargetEvaluation < this.targetEvaluationInterval) {
+                    return this.targetFlower;
+                }
+                
+                this.lastTargetEvaluation = frameCount;
+                
+                // 可採集花朵過濾 (有花蜜且花蜜量>0)
+                let availableFlowers = flowers.filter(flower => flower.hasNectar && flower.nectarAmount > 0);
+                if (availableFlowers.length === 0) return null;
+                
+                // 根據策略選擇花朵
+                let candidateFlowers = [];
+                
+                for (let flower of availableFlowers) {
+                    // 計算距離
+                    const distance = Math.sqrt(
+                        Math.pow(this.x - flower.x, 2) + 
+                        Math.pow(this.y - flower.y, 2)
+                    );
+                    
+                    // 獲取這朵花當前有多少蜜蜂正在前往
+                    const currentLoad = flowerTargetCount.get(flower.id) || 0;
+                    
+                    // 根據策略計算優先級分數
+                    let priorityScore = 0;
+                    
+                    // 基礎分數：距離越近分數越高
+                    const distanceScore = 1 / (distance + 1); // 避免除以零
+                    
+                    // 負載分數：當前蜜蜂越少分數越高 (分散策略)
+                    let loadScore = 0;
+                    switch(strategySettings.dispersion) {
+                        case 'low':
+                            loadScore = 1 / (currentLoad + 10); // 低分散度
+                            break;
+                        case 'medium':
+                            loadScore = 1 / (currentLoad + 3); // 中等分散度
+                            break;
+                        case 'high':
+                            loadScore = 1 / (currentLoad + 1); // 高分散度
+                            break;
+                    }
+                    
+                    // 花蜜量分數 (花蜜越多分數越高)
+                    const nectarScore = flower.nectarAmount / MAX_FLOWER_NECTAR;
+                    
+                    // 花朵大小分數 (較大花朵有更多花蜜)
+                    const sizeScore = flower.size / FLOWER_SIZE;
+                    
+                    // 組合分數
+                    switch(strategySettings.priority) {
+                        case 'distance':
+                            priorityScore = distanceScore * 0.7 + loadScore * 0.2 + nectarScore * 0.1;
+                            break;
+                        case 'nectar':
+                            priorityScore = nectarScore * 0.6 + distanceScore * 0.3 + loadScore * 0.1;
+                            break;
+                        case 'load':
+                            priorityScore = loadScore * 0.5 + distanceScore * 0.3 + nectarScore * 0.2;
+                            break;
+                    }
+                    
+                    // 隨機擾動，避免所有蜜蜂做完全相同的決定
+                    priorityScore *= (0.9 + Math.random() * 0.2);
+                    
+                    candidateFlowers.push({
+                        flower,
+                        distance,
+                        currentLoad,
+                        nectarAmount: flower.nectarAmount,
+                        priorityScore
+                    });
+                }
+                
+                // 按優先級分數排序
+                candidateFlowers.sort((a, b) => b.priorityScore - a.priorityScore);
+                
+                // 根據分配模式選擇花朵
+                let selectedFlower = null;
+                
+                switch(strategySettings.assignment) {
+                    case 'random':
+                        // 隨機選擇前30%的花朵
+                        const randomIndex = Math.floor(Math.random() * Math.min(3, candidateFlowers.length));
+                        selectedFlower = candidateFlowers[randomIndex]?.flower || null;
+                        break;
+                        
+                    case 'balanced':
+                        // 平衡分配：優先選擇負載低的花朵
+                        candidateFlowers.sort((a, b) => a.currentLoad - b.currentLoad || b.priorityScore - a.priorityScore);
+                        selectedFlower = candidateFlowers[0]?.flower || null;
+                        break;
+                        
+                    case 'smart':
+                        // 智慧分配：從前三名中隨機選擇 (參考方塊遊戲策略)
+                        const topN = Math.min(3, candidateFlowers.length);
+                        const randomTopIndex = Math.floor(Math.random() * topN);
+                        selectedFlower = candidateFlowers[randomTopIndex]?.flower || null;
+                        break;
+                }
+                
+                // 如果選擇了新的花朵，更新目標追蹤
+                if (selectedFlower && selectedFlower !== this.targetFlower) {
+                    // 減少舊花朵的目標計數
+                    if (this.targetFlower) {
+                        const oldCount = flowerTargetCount.get(this.targetFlower.id) || 0;
+                        flowerTargetCount.set(this.targetFlower.id, Math.max(0, oldCount - 1));
+                    }
+                    
+                    // 增加新花朵的目標計數
+                    const newCount = flowerTargetCount.get(selectedFlower.id) || 0;
+                    flowerTargetCount.set(selectedFlower.id, newCount + 1);
+                    
+                    this.targetFlower = selectedFlower;
+                }
+                
+                return this.targetFlower;
+            }
+
+            update(frameCount) {
+                this.wingPhase += this.wingSpeed;
+                
+                if (this.collectionCooldown > 0) {
+                    this.collectionCooldown--;
+                }
+
+                // 蜂后邏輯：專注於建造蜂巢
+                if (this.isQueen) {
+                    this.updateQueen();
+                    return;
+                }
+
+                // 工蜂邏輯：智慧採集花蜜
+                if (this.carryingNectar && this.returningToHive) {
+                    this.returnToHive();
+                } else if (!this.carryingNectar) {
+                    this.collectNectar(frameCount);
+                }
+
+                this.move();
+            }
+
+            updateQueen() {
+                // 蜂后在蜂巢附近巡邏
+                const hiveCenterX = GAME_WIDTH / 2;
+                const hiveCenterY = GAME_HEIGHT / 2;
+                const patrolRadius = 50 + hiveLevel * 10;
+
+                const dx = hiveCenterX - this.x;
+                const dy = hiveCenterY - this.y;
+                const distance = Math.sqrt(dx * dx + dy * dy);
+
+                if (distance > patrolRadius) {
+                    // 返回蜂巢區域
+                    const targetAngle = Math.atan2(dy, dx);
+                    this.angle = this.smoothTurn(this.angle, targetAngle, this.maxTurnRate);
+                } else {
+                    // 在區域內隨機巡邏
+                    if (Math.random() < 0.02) {
+                        this.angle += (Math.random() - 0.5) * 0.3;
+                    }
+                }
+
+                this.move();
+            }
+
+            collectNectar(frameCount) {
+                // 使用智慧策略尋找目標花朵
+                if (!this.targetFlower || !this.targetFlower.hasNectar || this.targetFlower.nectarAmount <= 0) {
+                    this.findBestFlower(frameCount);
+                }
+
+                if (this.targetFlower) {
+                    // 移動到花朵
+                    const dx = this.targetFlower.x - this.x;
+                    const dy = this.targetFlower.y - this.y;
+                    const distance = Math.sqrt(dx * dx + dy * dy);
+
+                    if (distance < FLOWER_SIZE) {
+                        // 到達花朵，採集花蜜
+                        if (this.collectionCooldown === 0) {
+                            this.collectNectarFromFlower();
+                        }
+                    } else {
+                        // 移動到花朵
+                        const targetAngle = Math.atan2(dy, dx);
+                        this.angle = this.smoothTurn(this.angle, targetAngle, this.maxTurnRate);
+                    }
+                } else {
+                    // 沒有可用花朵，隨機飛行
+                    if (Math.random() < 0.05) {
+                        this.angle += (Math.random() - 0.5) * 0.5;
+                    }
+                }
+            }
+
+            collectNectarFromFlower() {
+                if (this.targetFlower && this.targetFlower.hasNectar && this.targetFlower.nectarAmount > 0) {
+                    // 採集花蜜
+                    this.targetFlower.nectarAmount--;
+                    
+                    // 如果花朵花蜜採完，標記為無花蜜
+                    if (this.targetFlower.nectarAmount <= 0) {
+                        this.targetFlower.hasNectar = false;
+                    }
+                    
+                    this.carryingNectar = true;
+                    this.returningToHive = true;
+                    this.collectionCooldown = 30;
+
+                    // 創建花蜜球
+                    const nectarBall = new NectarBall(this.x, this.y, this.id);
+                    nectarBalls.push(nectarBall);
+                    
+                    // 採集後，減少該花朵的目標計數
+                    if (this.targetFlower) {
+                        const count = flowerTargetCount.get(this.targetFlower.id) || 0;
+                        flowerTargetCount.set(this.targetFlower.id, Math.max(0, count - 1));
+                    }
+                }
+            }
+
+            returnToHive() {
+                // 返回蜂巢
+                const hiveCenterX = GAME_WIDTH / 2;
+                const hiveCenterY = GAME_HEIGHT / 2;
+
+                const dx = hiveCenterX - this.x;
+                const dy = hiveCenterY - this.y;
+                const distance = Math.sqrt(dx * dx + dy * dy);
+
+                if (distance < 20) {
+                    // 到達蜂巢
+                    this.carryingNectar = false;
+                    this.returningToHive = false;
+                    
+                    // 到達蜂巢後，清除花朵目標
+                    if (this.targetFlower) {
+                        const count = flowerTargetCount.get(this.targetFlower.id) || 0;
+                        flowerTargetCount.set(this.targetFlower.id, Math.max(0, count - 1));
+                        this.targetFlower = null;
+                    }
+                    
+                    totalHoneyCollected++;
+
+                    // 移除花蜜球
+                    const nectarIndex = nectarBalls.findIndex(ball => ball.carrierBeeId === this.id);
+                    if (nectarIndex > -1) {
+                        nectarBalls.splice(nectarIndex, 1);
+                    }
+                } else {
+                    // 移動到蜂巢
+                    const targetAngle = Math.atan2(dy, dx);
+                    this.angle = this.smoothTurn(this.angle, targetAngle, this.maxTurnRate);
+                }
+            }
+
+            smoothTurn(currentAngle, targetAngle, maxTurnRate) {
+                let angleDiff = targetAngle - currentAngle;
+                
+                if (angleDiff > Math.PI) angleDiff -= 2 * Math.PI;
+                if (angleDiff < -Math.PI) angleDiff += 2 * Math.PI;
+
+                return currentAngle + Math.min(Math.abs(angleDiff), maxTurnRate) * Math.sign(angleDiff);
+            }
+
+            move() {
+                const vx = Math.cos(this.angle) * this.speed;
+                const vy = Math.sin(this.angle) * this.speed;
+
+                let nextX = this.x + vx;
+                let nextY = this.y + vy;
+
+                // 邊界檢查
+                nextX = Math.max(this.size, Math.min(GAME_WIDTH - this.size, nextX));
+                nextY = Math.max(this.size, Math.min(GAME_HEIGHT - this.size, nextY));
+
+                this.x = nextX;
+                this.y = nextY;
+
+                // 更新攜帶的花蜜球位置
+                if (this.carryingNectar) {
+                    const nectarBall = nectarBalls.find(ball => ball.carrierBeeId === this.id);
+                    if (nectarBall) {
+                        nectarBall.x = this.x;
+                        nectarBall.y = this.y - this.size - 2;
+                    }
+                }
+            }
+
+            draw() {
+                ctx.save();
+
+                // 繪製翅膀
+                const wingSize = this.size * 1.2;
+                const wingOffset = Math.sin(this.wingPhase) * 0.3;
+                
+                ctx.fillStyle = this.wingColor;
+                ctx.globalAlpha = 0.6;
+                
+                // 左翅膀
+                ctx.beginPath();
+                ctx.ellipse(
+                    this.x - this.size * 0.8, 
+                    this.y - this.size * 0.5 + wingOffset * 3, 
+                    wingSize * 0.8, wingSize * 0.4, 
+                    -0.3 + wingOffset, 0, Math.PI * 2
+                );
+                ctx.fill();
+
+                // 右翅膀
+                ctx.beginPath();
+                ctx.ellipse(
+                    this.x + this.size * 0.8, 
+                    this.y - this.size * 0.5 + wingOffset * 3, 
+                    wingSize * 0.8, wingSize * 0.4, 
+                    0.3 - wingOffset, 0, Math.PI * 2
+                );
+                ctx.fill();
+
+                ctx.globalAlpha = 1;
+
+                // 繪製身體
+                ctx.fillStyle = this.color;
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+                ctx.fill();
+
+                // 繪製條紋
+                ctx.strokeStyle = '#8B4513';
+                ctx.lineWidth = 1;
+                for (let i = -1; i <= 1; i++) {
+                    ctx.beginPath();
+                    ctx.arc(this.x, this.y + i * this.size * 0.4, this.size * 0.9, 0, Math.PI * 2);
+                    ctx.stroke();
+                }
+
+                // 繪製頭部
+                const headSize = this.size * 0.7;
+                const headX = this.x + Math.cos(this.angle) * (this.size + headSize * 0.3);
+                const headY = this.y + Math.sin(this.angle) * (this.size + headSize * 0.3);
+
+                ctx.fillStyle = this.color;
+                ctx.beginPath();
+                ctx.arc(headX, headY, headSize, 0, Math.PI * 2);
+                ctx.fill();
+
+                // 繪製眼睛
+                ctx.fillStyle = '#000';
+                const eyeSize = 1;
+                const eyeOffset = headSize * 0.3;
+                ctx.beginPath();
+                ctx.arc(headX - eyeOffset, headY - eyeOffset, eyeSize, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.beginPath();
+                ctx.arc(headX + eyeOffset, headY - eyeOffset, eyeSize, 0, Math.PI * 2);
+                ctx.fill();
+
+                // 繪製觸角
+                ctx.strokeStyle = this.color;
+                ctx.lineWidth = 1;
+                const antennaLength = this.size * 0.8;
+                const antennaAngle = this.angle - Math.PI / 2;
+                
+                ctx.beginPath();
+                ctx.moveTo(headX, headY);
+                ctx.lineTo(
+                    headX + Math.cos(antennaAngle - 0.3) * antennaLength,
+                    headY + Math.sin(antennaAngle - 0.3) * antennaLength
+                );
+                ctx.stroke();
+
+                ctx.beginPath();
+                ctx.moveTo(headX, headY);
+                ctx.lineTo(
+                    headX + Math.cos(antennaAngle + 0.3) * antennaLength,
+                    headY + Math.sin(antennaAngle + 0.3) * antennaLength
+                );
+                ctx.stroke();
+
+                ctx.restore();
+            }
+        }
+
+        /**
+         * 花朵類別 - 增強版，增加花蜜產量
+         */
+        class Flower {
+            constructor(x, y) {
+                this.id = flowerIdCounter++;
+                this.x = x;
+                this.y = y;
+                this.size = FLOWER_SIZE + Math.random() * 6;
+                
+                // 花蜜相關屬性
+                this.maxNectarAmount = MIN_FLOWER_NECTAR + Math.floor(Math.random() * (MAX_FLOWER_NECTAR - MIN_FLOWER_NECTAR + 1));
+                this.nectarAmount = this.maxNectarAmount;
+                this.hasNectar = this.nectarAmount > 0;
+                
+                this.color = this.getRandomFlowerColor();
+                this.petalCount = Math.floor(Math.random() * 3) + 5;
+                this.rotation = Math.random() * Math.PI * 2;
+                this.growthTime = 0;
+                this.maxLifetime = 300 + Math.random() * 200;
+                this.lifetime = 0;
+                this.nectarRegenTimer = 0;
+                this.regenTime = NECTAR_REGEN_MIN + Math.random() * (NECTAR_REGEN_MAX - NECTAR_REGEN_MIN);
+            }
+
+            getRandomFlowerColor() {
+                const colors = [
+                    ['#FF69B4', '#FFB6C1'], // 粉紅色
+                    ['#FF6347', '#FFA07A'], // 紅色
+                    ['#9370DB', '#DDA0DD'], // 紫色
+                    ['#20B2AA', '#AFEEEE'], // 青色
+                    ['#FFD700', '#FFF8DC'], // 黃色
+                    ['#FF4500', '#FF8C00'], // 橙色
+                    ['#FF1493', '#FF69B4'], // 深粉紅
+                    ['#8A2BE2', '#9370DB']  // 藍紫色
+                ];
+                return colors[Math.floor(Math.random() * colors.length)];
+            }
+
+            update() {
+                this.lifetime++;
+                this.rotation += 0.005;
+
+                // 自然生長
+                if (this.growthTime < 60) {
+                    this.growthTime++;
+                }
+
+                // 花蜜再生
+                if (!this.hasNectar) {
+                    this.nectarRegenTimer++;
+                    if (this.nectarRegenTimer > this.regenTime) {
+                        // 再生花蜜，隨機1-3點
+                        this.maxNectarAmount = MIN_FLOWER_NECTAR + Math.floor(Math.random() * (MAX_FLOWER_NECTAR - MIN_FLOWER_NECTAR + 1));
+                        this.nectarAmount = this.maxNectarAmount;
+                        this.hasNectar = true;
+                        this.nectarRegenTimer = 0;
+                        this.regenTime = NECTAR_REGEN_MIN + Math.random() * (NECTAR_REGEN_MAX - NECTAR_REGEN_MIN);
+                    }
+                }
+
+                // 花朵枯萎
+                if (this.lifetime > this.maxLifetime && Math.random() < 0.01) {
+                    // 從目標追蹤中移除
+                    flowerTargetCount.delete(this.id);
+                    return false; // 移除花朵
+                }
+
+                return true;
+            }
+
+            draw() {
+                const actualSize = this.size * (this.growthTime / 60);
+                
+                ctx.save();
+                ctx.translate(this.x, this.y);
+                ctx.rotate(this.rotation);
+
+                // 繪製花瓣
+                const petalSize = actualSize * 0.8;
+                const angleStep = (Math.PI * 2) / this.petalCount;
+
+                for (let i = 0; i < this.petalCount; i++) {
+                    const angle = i * angleStep;
+                    const petalX = Math.cos(angle) * petalSize * 0.6;
+                    const petalY = Math.sin(angle) * petalSize * 0.6;
+
+                    // 創建漸變
+                    const gradient = ctx.createRadialGradient(
+                        petalX, petalY, 0,
+                        petalX, petalY, petalSize * 0.5
+                    );
+                    gradient.addColorStop(0, this.color[1]);
+                    gradient.addColorStop(1, this.color[0]);
+
+                    ctx.fillStyle = gradient;
+                    ctx.beginPath();
+                    ctx.ellipse(
+                        petalX, petalY,
+                        petalSize * 0.5, petalSize * 0.3,
+                        angle, 0, Math.PI * 2
+                    );
+                    ctx.fill();
+
+                    // 花瓣邊框
+                    ctx.strokeStyle = this.color[0];
+                    ctx.lineWidth = 1;
+                    ctx.stroke();
+                }
+
+                // 繪製花心
+                const centerGradient = ctx.createRadialGradient(0, 0, 0, 0, 0, actualSize * 0.3);
+                centerGradient.addColorStop(0, '#FFD700');
+                centerGradient.addColorStop(0.5, '#FFA500');
+                centerGradient.addColorStop(1, '#FF8C00');
+
+                ctx.fillStyle = centerGradient;
+                ctx.beginPath();
+                ctx.arc(0, 0, actualSize * 0.3, 0, Math.PI * 2);
+                ctx.fill();
+
+                // 花心細節
+                ctx.fillStyle = '#8B4513';
+                ctx.beginPath();
+                ctx.arc(0, 0, actualSize * 0.1, 0, Math.PI * 2);
+                ctx.fill();
+
+                // 顯示花蜜量
+                if (this.hasNectar) {
+                    // 花蜜指示點
+                    ctx.fillStyle = 'rgba(255, 215, 0, 0.8)';
+                    ctx.beginPath();
+                    ctx.arc(0, -actualSize * 0.8, 2, 0, Math.PI * 2);
+                    ctx.fill();
+                    
+                    // 顯示花蜜量
+                    ctx.fillStyle = '#2E8B57';
+                    ctx.font = 'bold 10px Arial';
+                    ctx.textAlign = 'center';
+                    ctx.fillText(this.nectarAmount.toString(), 0, actualSize * 0.9);
+                    
+                    // 顯示有多少蜜蜂正在前往這朵花
+                    const beeCount = flowerTargetCount.get(this.id) || 0;
+                    if (beeCount > 0) {
+                        ctx.fillStyle = 'rgba(255, 0, 0, 0.7)';
+                        ctx.font = '10px Arial';
+                        ctx.fillText(`${beeCount}蜂`, 0, -actualSize * 1.1);
+                    }
+                } else {
+                    // 顯示再生進度
+                    const regenPercent = Math.min(1, this.nectarRegenTimer / this.regenTime);
+                    ctx.fillStyle = 'rgba(128, 128, 128, 0.7)';
+                    ctx.font = 'bold 10px Arial';
+                    ctx.textAlign = 'center';
+                    ctx.fillText(`再${Math.floor((1 - regenPercent) * 100)}%`, 0, actualSize * 0.9);
+                }
+
+                ctx.restore();
+            }
+        }
+
+        /**
+         * 花蜜球類別
+         */
+        class NectarBall {
+            constructor(x, y, carrierBeeId) {
+                this.x = x;
+                this.y = y;
+                this.size = NECTAR_BALL_SIZE;
+                this.carrierBeeId = carrierBeeId;
+                this.color = '#FFD700';
+                this.glowPhase = Math.random() * Math.PI * 2;
+            }
+
+            update() {
+                this.glowPhase += 0.1;
+            }
+
+            draw() {
+                // 發光效果
+                const glowSize = this.size + Math.sin(this.glowPhase) * 2;
+                const gradient = ctx.createRadialGradient(
+                    this.x, this.y, 0,
+                    this.x, this.y, glowSize
+                );
+                gradient.addColorStop(0, 'rgba(255, 215, 0, 0.8)');
+                gradient.addColorStop(0.5, 'rgba(255, 215, 0, 0.4)');
+                gradient.addColorStop(1, 'rgba(255, 215, 0, 0)');
+
+                ctx.fillStyle = gradient;
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, glowSize, 0, Math.PI * 2);
+                ctx.fill();
+
+                // 花蜜球本體
+                ctx.fillStyle = this.color;
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+                ctx.fill();
+
+                // 高光
+                ctx.fillStyle = '#FFFACD';
+                ctx.beginPath();
+                ctx.arc(this.x - 1, this.y - 1, this.size * 0.3, 0, Math.PI * 2);
+                ctx.fill();
+            }
+        }
+
+        /**
+         * 蜂巢細胞類別
+         */
+        class HiveCell {
+            constructor(x, y, level) {
+                this.x = x;
+                this.y = y;
+                this.level = level;
+                this.size = 8 + level * 2;
+                this.rotation = Math.random() * Math.PI * 2;
+                this.buildProgress = 0;
+                this.maxBuildProgress = 100;
+                this.isBuilt = false;
+            }
+
+            update() {
+                if (!this.isBuilt && this.buildProgress < this.maxBuildProgress) {
+                    this.buildProgress += 0.5;
+                    if (this.buildProgress >= this.maxBuildProgress) {
+                        this.isBuilt = true;
+                    }
+                }
+            }
+
+            draw() {
+                ctx.save();
+                ctx.translate(this.x, this.y);
+                ctx.rotate(this.rotation);
+
+                const progress = this.buildProgress / this.maxBuildProgress;
+                const alpha = 0.3 + progress * 0.7;
+
+                // 六邊形蜂巢
+                ctx.strokeStyle = `rgba(255, 165, 0, ${alpha})`;
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                
+                for (let i = 0; i < 6; i++) {
+                    const angle = (Math.PI * 2 / 6) * i;
+                    const x = Math.cos(angle) * this.size;
+                    const y = Math.sin(angle) * this.size;
+                    
+                    if (i === 0) {
+                        ctx.moveTo(x, y);
+                    } else {
+                        ctx.lineTo(x, y);
+                    }
+                }
+                
+                ctx.closePath();
+                ctx.stroke();
+
+                // 填充
+                if (progress > 0.5) {
+                    ctx.fillStyle = `rgba(255, 215, 0, ${progress * 0.3})`;
+                    ctx.fill();
+                }
+
+                // 內部細節
+                if (this.isBuilt) {
+                    ctx.strokeStyle = `rgba(255, 140, 0, ${alpha})`;
+                    ctx.lineWidth = 1;
+                    ctx.beginPath();
+                    ctx.arc(0, 0, this.size * 0.6, 0, Math.PI * 2);
+                    ctx.stroke();
+                }
+
+                ctx.restore();
+            }
+        }
+
+        /**
+         * 初始化花朵
+         */
+        function initializeFlowers() {
+            flowers = [];
+            flowerTargetCount.clear();
+            const flowerCount = Math.floor(FLOWER_SPAWN_RATIO * GAME_WIDTH * GAME_HEIGHT / 1000);
+            
+            for (let i = 0; i < flowerCount; i++) {
+                const x = Math.random() * (GAME_WIDTH - 40) + 20;
+                const y = Math.random() * (GAME_HEIGHT - 40) + 20;
+                const flower = new Flower(x, y);
+                flowers.push(flower);
+                flowerTargetCount.set(flower.id, 0);
+            }
+        }
+
+        /**
+         * 初始化蜂巢
+         */
+        function initializeHive() {
+            hiveCells = [];
+            const centerX = GAME_WIDTH / 2;
+            const centerY = GAME_HEIGHT / 2;
+            
+            // 創建基礎蜂巢結構
+            for (let ring = 0; ring < hiveLevel; ring++) {
+                const cellsInRing = ring === 0 ? 1 : ring * 6;
+                const ringRadius = ring * 25;
+                
+                for (let i = 0; i < cellsInRing; i++) {
+                    const angle = (Math.PI * 2 / cellsInRing) * i;
+                    const x = centerX + Math.cos(angle) * ringRadius;
+                    const y = centerY + Math.sin(angle) * ringRadius;
+                    
+                    hiveCells.push(new HiveCell(x, y, hiveLevel));
+                }
+            }
+        }
+
+        /**
+         * 花朵自然生長和枯萎
+         */
+        function updateFlowers() {
+            // 更新現有花朵
+            for (let i = flowers.length - 1; i >= 0; i--) {
+                if (!flowers[i].update()) {
+                    // 從目標追蹤中移除
+                    flowerTargetCount.delete(flowers[i].id);
+                    flowers.splice(i, 1);
+                }
+            }
+
+            // 隨機生成新花朵
+            if (flowers.length < 20 && Math.random() < 0.02) {
+                const x = Math.random() * (GAME_WIDTH - 40) + 20;
+                const y = Math.random() * (GAME_HEIGHT - 40) + 20;
+                const flower = new Flower(x, y);
+                flowers.push(flower);
+                flowerTargetCount.set(flower.id, 0);
+            }
+        }
+
+        /**
+         * 升級蜂巢
+         */
+        function upgradeHive() {
+            const cost = 50 * hiveLevel;
+            if (totalHoneyCollected >= cost) {
+                totalHoneyCollected -= cost;
+                hiveLevel++;
+                initializeHive();
+                
+                // 更新升級按鈕文字
+                const nextCost = 50 * hiveLevel;
+                document.getElementById('upgrade-button').textContent = `升級蜂巢 (${nextCost}花蜜)`;
+            }
+        }
+
+        /**
+         * 更新策略顯示
+         */
+        function updateStrategyDisplay() {
+            strategyDispersion.textContent = 
+                strategySettings.dispersion === 'low' ? '低' : 
+                strategySettings.dispersion === 'medium' ? '中' : '高';
+                
+            strategyPriority.textContent = 
+                strategySettings.priority === 'distance' ? '距離優先' : 
+                strategySettings.priority === 'nectar' ? '花蜜量優先' : '負載優先';
+                
+            strategyAssignment.textContent = 
+                strategySettings.assignment === 'random' ? '隨機分配' : 
+                strategySettings.assignment === 'balanced' ? '均衡分配' : '智慧分配';
+        }
+
+        /**
+         * 更新統計視窗
+         */
+        function updateStats(frameCount) {
+            statsBeeCount.textContent = bees.length;
+            
+            const hasQueen = bees.some(bee => bee.isQueen);
+            statsQueenStatus.textContent = hasQueen ? "已召喚" : "未召喚";
+            if (hasQueen) {
+                statsQueenStatus.style.color = "#FFD700";
+            } else {
+                statsQueenStatus.style.color = "#666";
+            }
+            
+            statsFlowerCount.textContent = flowers.length;
+            statsHoneyCollected.textContent = totalHoneyCollected;
+            statsHiveLevel.textContent = hiveLevel;
+            statsNectarBalls.textContent = nectarBalls.length;
+            
+            // 計算平均每朵花的花蜜量
+            let totalNectar = 0;
+            let flowersWithNectar = 0;
+            for (let flower of flowers) {
+                if (flower.hasNectar) {
+                    totalNectar += flower.nectarAmount;
+                    flowersWithNectar++;
+                }
+            }
+            const avgNectar = flowersWithNectar > 0 ? (totalNectar / flowersWithNectar).toFixed(1) : "0.0";
+            statsNectarPerFlower.textContent = avgNectar;
+            
+            // 更新升級按鈕狀態
+            const upgradeButton = document.getElementById('upgrade-button');
+            const cost = 50 * hiveLevel;
+            if (totalHoneyCollected >= cost) {
+                upgradeButton.disabled = false;
+            } else {
+                upgradeButton.disabled = true;
+            }
+            
+            // 更新策略顯示
+            updateStrategyDisplay();
+        }
+
+        /**
+         * 切換統計視窗顯示
+         */
+        function toggleStats() {
+            const statsWindow = document.getElementById('stats-window');
+            const statsButton = document.getElementById('stats-button');
+            
+            if (statsVisible) {
+                statsWindow.style.display = 'none';
+                statsButton.textContent = '顯示統計(A)';
+                statsVisible = false;
+            } else {
+                statsWindow.style.display = 'block';
+                statsButton.textContent = '隱藏統計(A)';
+                statsVisible = true;
+            }
+        }
+
+        /**
+         * 切換幫助視窗顯示
+         */
+        function toggleHelp() {
+            const helpWindow = document.getElementById('help-window');
+            const helpButton = document.getElementById('help-button');
+            
+            if (helpVisible) {
+                helpWindow.style.display = 'none';
+                helpButton.textContent = '遊戲幫助(S)';
+                helpVisible = false;
+            } else {
+                helpWindow.style.display = 'block';
+                helpButton.textContent = '隱藏幫助(S)';
+                helpVisible = true;
+            }
+        }
+
+        /**
+         * 遊戲主循環
+         */
+        let frameCount = 0;
+        function gameLoop() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            frameCount++;
+
+            // 繪製背景草地
+            const grassGradient = ctx.createLinearGradient(0, 0, 0, GAME_HEIGHT);
+            grassGradient.addColorStop(0, '#90EE90');
+            grassGradient.addColorStop(0.3, '#7CFC00');
+            grassGradient.addColorStop(1, '#228B22');
+            
+            ctx.fillStyle = grassGradient;
+            ctx.fillRect(0, 0, GAME_WIDTH, GAME_HEIGHT);
+
+            // 添加草地紋理
+            ctx.fillStyle = 'rgba(34, 139, 34, 0.1)';
+            for (let i = 0; i < 50; i++) {
+                const x = Math.random() * GAME_WIDTH;
+                const y = Math.random() * GAME_HEIGHT;
+                ctx.fillRect(x, y, 2, 2);
+            }
+
+            // 更新和繪製蜂巢
+            for (let cell of hiveCells) {
+                cell.update();
+                cell.draw();
+            }
+
+            // 更新和繪製花朵
+            for (let flower of flowers) {
+                flower.draw();
+            }
+
+            // 更新和繪製花蜜球
+            for (let nectarBall of nectarBalls) {
+                nectarBall.update();
+                nectarBall.draw();
+            }
+
+            // 更新和繪製蜜蜂
+            for (let bee of bees) {
+                bee.update(frameCount);
+                bee.draw();
+            }
+
+            // 更新花朵
+            updateFlowers();
+
+            // 更新統計
+            updateStats(frameCount);
+
+            requestAnimationFrame(gameLoop);
+        }
+
+        /**
+         * 統一取得事件座標的 helper
+         */
+        function getEventPos(event) {
+            const rect = canvas.getBoundingClientRect();
+            if (event.touches && event.touches.length > 0) {
+                return {
+                    x: event.touches[0].clientX - rect.left,
+                    y: event.touches[0].clientY - rect.top
+                };
+            } else if (event.clientX !== undefined) {
+                return {
+                    x: event.clientX - rect.left,
+                    y: event.clientY - rect.top
+                };
+            }
+            return null;
+        }
+
+        /**
+         * 處理點擊事件
+         */
+        function handleInteraction(event) {
+            const pos = getEventPos(event);
+            if (!pos) return;
+            
+            let x = pos.x;
+            let y = pos.y;
+
+            // 檢查是否點擊在花朵上
+            let clickedFlower = null;
+            for (let flower of flowers) {
+                const distance = Math.sqrt(
+                    Math.pow(x - flower.x, 2) + 
+                    Math.pow(y - flower.y, 2)
+                );
+                if (distance < flower.size) {
+                    clickedFlower = flower;
+                    break;
+                }
+            }
+
+            if (clickedFlower) {
+                // 在花朵上召喚蜜蜂
+                const isQueen = bees.length === 0;
+                const newBee = new Bee(clickedFlower.x, clickedFlower.y, isQueen);
+                bees.push(newBee);
+                
+                // 如果是工蜂，立即為它分配目標
+                if (!isQueen) {
+                    newBee.findBestFlower(frameCount);
+                }
+            }
+        }
+
+        /**
+         * 調整畫布尺寸
+         */
+        function resizeCanvas() {
+            const container = document.getElementById('game-container');
+            GAME_WIDTH = container.clientWidth;
+            GAME_HEIGHT = container.clientHeight;
+            canvas.width = GAME_WIDTH;
+            canvas.height = GAME_HEIGHT;
+
+            // 重新初始化花朵和蜂巢
+            if (flowers.length === 0) {
+                initializeFlowers();
+                initializeHive();
+            }
+        }
+
+        // 監聽畫布點擊事件
+        canvas.addEventListener('mousedown', handleInteraction);
+        canvas.addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            if (e.touches.length > 0) {
+                handleInteraction(e);
+            }
+        }, { passive: false });
+
+        // 監聽窗口大小變化
+        window.addEventListener('resize', resizeCanvas);
+
+        // 程式啟動點
+        window.onload = function () {
+            resizeCanvas();
+            
+            // 設定按鈕事件
+            document.getElementById('stats-button').addEventListener('click', toggleStats);
+            document.getElementById('help-button').addEventListener('click', toggleHelp);
+            document.getElementById('close-stats').addEventListener('click', toggleStats);
+            document.getElementById('close-help').addEventListener('click', toggleHelp);
+            document.getElementById('upgrade-button').addEventListener('click', upgradeHive);
+            
+            // 鍵盤快捷鍵 
+            document.addEventListener('keydown', (e) => {
+                // A 鍵切換統計視窗
+                if (e.key === 'a' || e.key === 'A') {
+                    toggleStats();
+                    e.preventDefault();
+                }
+                // S 鍵切換幫助視窗
+                if (e.key === 's' || e.key === 'S') {
+                    toggleHelp();
+                    e.preventDefault();
+                }
+                // D 鍵升級蜂巢
+                if (e.key === 'd' || e.key === 'D') {
+                    upgradeHive();
+                    e.preventDefault();
+                }
+                // 1-3 鍵切換分散度策略
+                if (e.key === '1') {
+                    strategySettings.dispersion = 'low';
+                    updateStrategyDisplay();
+                }
+                if (e.key === '2') {
+                    strategySettings.dispersion = 'medium';
+                    updateStrategyDisplay();
+                }
+                if (e.key === '3') {
+                    strategySettings.dispersion = 'high';
+                    updateStrategyDisplay();
+                }
+                // Q/W/E 鍵切換優先級策略
+                if (e.key === 'q' || e.key === 'Q') {
+                    strategySettings.priority = 'distance';
+                    updateStrategyDisplay();
+                }
+                if (e.key === 'w' || e.key === 'W') {
+                    strategySettings.priority = 'nectar';
+                    updateStrategyDisplay();
+                }
+                if (e.key === 'e' || e.key === 'E') {
+                    strategySettings.priority = 'load';
+                    updateStrategyDisplay();
+                }
+            });
+
+            // 開始遊戲循環
+            gameLoop();
+        };
+    </script>
+</body>
+</html>

@@ -1,0 +1,715 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>可替换恐龙的跳跃游戏</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        
+        body {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            background: linear-gradient(135deg, #1a2a6c, #b21f1f, #fdbb2d);
+            padding: 20px;
+            overflow: hidden;
+            color: white;
+        }
+        
+        .container {
+            width: 100%;
+            max-width: 900px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 20px;
+        }
+        
+        header {
+            text-align: center;
+            margin-bottom: 10px;
+        }
+        
+        h1 {
+            font-size: 2.8rem;
+            margin-bottom: 5px;
+            text-shadow: 3px 3px 5px rgba(0, 0, 0, 0.5);
+            color: #ffcc00;
+            letter-spacing: 2px;
+        }
+        
+        .subtitle {
+            font-size: 1.2rem;
+            color: #ffeb3b;
+            max-width: 600px;
+            margin: 0 auto;
+        }
+        
+        .game-section {
+            display: flex;
+            width: 100%;
+            gap: 20px;
+            flex-wrap: wrap;
+        }
+        
+        .game-container {
+            flex: 1;
+            min-width: 300px;
+            position: relative;
+            background: rgba(0, 0, 0, 0.7);
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+            border: 3px solid #ffcc00;
+        }
+        
+        #gameCanvas {
+            display: block;
+            width: 100%;
+            background: #f7f7f7;
+        }
+        
+        .controls {
+            width: 300px;
+            background: rgba(0, 0, 0, 0.7);
+            padding: 20px;
+            border-radius: 12px;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            border: 3px solid #ffcc00;
+        }
+        
+        .panel {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 15px;
+            border-radius: 10px;
+        }
+        
+        h2 {
+            color: #ffcc00;
+            margin-bottom: 15px;
+            font-size: 1.5rem;
+        }
+        
+        .score-container {
+            display: flex;
+            justify-content: space-between;
+            font-size: 1.2rem;
+            margin-bottom: 10px;
+        }
+        
+        .score-label {
+            color: #ffcc00;
+        }
+        
+        .dino-selector {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+        
+        .dino-options {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+        
+        .dino-option {
+            width: 60px;
+            height: 60px;
+            border-radius: 8px;
+            overflow: hidden;
+            cursor: pointer;
+            border: 2px solid transparent;
+            transition: all 0.3s;
+        }
+        
+        .dino-option:hover {
+            transform: scale(1.1);
+            border-color: #ffcc00;
+        }
+        
+        .dino-option.active {
+            border-color: #ffcc00;
+            box-shadow: 0 0 10px #ffcc00;
+        }
+        
+        .dino-option img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+        
+        .upload-area {
+            border: 2px dashed #ffcc00;
+            border-radius: 8px;
+            padding: 15px;
+            text-align: center;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+        
+        .upload-area:hover {
+            background: rgba(255, 204, 0, 0.1);
+        }
+        
+        .upload-icon {
+            font-size: 2rem;
+            margin-bottom: 10px;
+            color: #ffcc00;
+        }
+        
+        .game-instructions {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            margin-top: 10px;
+        }
+        
+        .instruction {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .key {
+            background: rgba(0, 0, 0, 0.5);
+            padding: 5px 10px;
+            border-radius: 5px;
+            border: 1px solid #ffcc00;
+            min-width: 40px;
+            text-align: center;
+        }
+        
+        button {
+            background: linear-gradient(to bottom, #ffcc00, #ff9800);
+            color: #1a1a1a;
+            border: none;
+            padding: 12px 20px;
+            font-size: 1.1rem;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: all 0.3s;
+            width: 100%;
+            margin-top: 10px;
+        }
+        
+        button:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+        }
+        
+        .game-over {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 10;
+            display: none;
+        }
+        
+        .game-over h2 {
+            font-size: 3rem;
+            color: #ff3333;
+            margin-bottom: 20px;
+        }
+        
+        .game-over p {
+            font-size: 1.5rem;
+            margin-bottom: 20px;
+            color: #ffcc00;
+        }
+        
+        .start-screen {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 10;
+        }
+        
+        .start-screen h2 {
+            font-size: 2.5rem;
+            color: #ffcc00;
+            margin-bottom: 20px;
+        }
+        
+        @media (max-width: 768px) {
+            .game-section {
+                flex-direction: column;
+            }
+            
+            .controls {
+                width: 100%;
+            }
+            
+            h1 {
+                font-size: 2.2rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🦖 可替换恐龙的跳跃游戏</h1>
+            <p class="subtitle">选择或上传你喜欢的恐龙图片，避开障碍物挑战最高分！</p>
+        </header>
+        
+        <div class="game-section">
+            <div class="game-container">
+                <canvas id="gameCanvas" width="800" height="400"></canvas>
+                
+                <div class="start-screen" id="startScreen">
+                    <h2>恐龙跳跃游戏</h2>
+                    <p>按空格键或点击按钮开始游戏</p>
+                    <button id="startButton">开始游戏</button>
+                </div>
+                
+                <div class="game-over" id="gameOverScreen">
+                    <h2>游戏结束!</h2>
+                    <p>得分: <span id="finalScore">0</span></p>
+                    <button id="restartButton">重新开始</button>
+                </div>
+            </div>
+            
+            <div class="controls">
+                <div class="panel">
+                    <h2>游戏状态</h2>
+                    <div class="score-container">
+                        <span class="score-label">当前分数:</span>
+                        <span id="score">0</span>
+                    </div>
+                    <div class="score-container">
+                        <span class="score-label">最高分数:</span>
+                        <span id="highScore">0</span>
+                    </div>
+                    <div class="score-container">
+                        <span class="score-label">当前恐龙:</span>
+                        <span id="currentDino">默认恐龙</span>
+                    </div>
+                </div>
+                
+                <div class="panel dino-selector">
+                    <h2>选择恐龙</h2>
+                    <div class="dino-options">
+                        <div class="dino-option active" data-dino="default">
+                            <img src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' fill='%23333'/%3E%3Cpath d='M30,70 L40,50 L50,60 L60,50 L70,70 L30,70 M40,40 Q50,30 60,40' stroke='%23fff' stroke-width='5' fill='none'/%3E%3Ccircle cx='45' cy='35' r='5' fill='%23fff'/%3E%3C/svg%3E" alt="默认恐龙">
+                        </div>
+                        <div class="dino-option" data-dino="green">
+                            <img src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' fill='%23333'/%3E%3Cpath d='M30,70 L40,50 L50,60 L60,50 L70,70 L30,70 M40,40 Q50,30 60,40' stroke='%234CAF50' stroke-width='5' fill='none'/%3E%3Ccircle cx='45' cy='35' r='5' fill='%234CAF50'/%3E%3C/svg%3E" alt="绿色恐龙">
+                        </div>
+                        <div class="dino-option" data-dino="blue">
+                            <img src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' fill='%23333'/%3E%3Cpath d='M30,70 L40,50 L50,60 L60,50 L70,70 L30,70 M40,40 Q50,30 60,40' stroke='%232196F3' stroke-width='5' fill='none'/%3E%3Ccircle cx='45' cy='35' r='5' fill='%232196F3'/%3E%3C/svg%3E" alt="蓝色恐龙">
+                        </div>
+                        <div class="dino-option" data-dino="red">
+                            <img src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' fill='%23333'/%3E%3Cpath d='M30,70 L40,50 L50,60 L60,50 L70,70 L30,70 M40,40 Q50,30 60,40' stroke='%23F44336' stroke-width='5' fill='none'/%3E%3Ccircle cx='45' cy='35' r='5' fill='%23F44336'/%3E%3C/svg%3E" alt="红色恐龙">
+                        </div>
+                    </div>
+                    
+                    <div class="upload-area" id="uploadArea">
+                        <div class="upload-icon">📁</div>
+                        <p>点击上传自定义图片</p>
+                        <input type="file" id="dinoUpload" accept="image/*" style="display: none;">
+                    </div>
+                </div>
+                
+                <div class="panel">
+                    <h2>游戏控制</h2>
+                    <div class="game-instructions">
+                        <div class="instruction">
+                            <span class="key">空格键</span>
+                            <span>跳跃/开始游戏</span>
+                        </div>
+                        <div class="instruction">
+                            <span class="key">↑</span>
+                            <span>跳跃</span>
+                        </div>
+                        <div class="instruction">
+                            <span class="key">↓</span>
+                            <span>下蹲 (暂未实现)</span>
+                        </div>
+                    </div>
+                    <button id="jumpButton">跳跃</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 游戏主逻辑
+        document.addEventListener('DOMContentLoaded', () => {
+            const canvas = document.getElementById('gameCanvas');
+            const ctx = canvas.getContext('2d');
+            const scoreElement = document.getElementById('score');
+            const highScoreElement = document.getElementById('highScore');
+            const finalScoreElement = document.getElementById('finalScore');
+            const currentDinoElement = document.getElementById('currentDino');
+            const startScreen = document.getElementById('startScreen');
+            const gameOverScreen = document.getElementById('gameOverScreen');
+            const startButton = document.getElementById('startButton');
+            const restartButton = document.getElementById('restartButton');
+            const jumpButton = document.getElementById('jumpButton');
+            const uploadArea = document.getElementById('uploadArea');
+            const dinoUpload = document.getElementById('dinoUpload');
+            
+            // 游戏变量
+            let gameSpeed = 5;
+            let score = 0;
+            let highScore = localStorage.getItem('dinoHighScore') || 0;
+            let gameRunning = false;
+            let frames = 0;
+            
+            // 恐龙图像
+            const dinoImages = {
+                default: null,
+                green: null,
+                blue: null,
+                red: null,
+                custom: null
+            };
+            
+            let currentDino = 'default';
+            
+            // 游戏对象
+            const dino = {
+                x: 50,
+                y: canvas.height - 100,
+                width: 60,
+                height: 70,
+                jumping: false,
+                jumpVelocity: 0,
+                gravity: 0.5,
+                jumpStrength: 14,
+                draw() {
+                    if (dinoImages[currentDino]) {
+                        ctx.drawImage(dinoImages[currentDino], this.x, this.y, this.width, this.height);
+                    } else {
+                        // 绘制默认恐龙
+                        ctx.fillStyle = '#333';
+                        ctx.fillRect(this.x, this.y, this.width, this.height);
+                        
+                        // 绘制眼睛
+                        ctx.fillStyle = 'white';
+                        ctx.beginPath();
+                        ctx.arc(this.x + 45, this.y + 15, 5, 0, Math.PI * 2);
+                        ctx.fill();
+                    }
+                },
+                jump() {
+                    if (!this.jumping) {
+                        this.jumping = true;
+                        this.jumpVelocity = -this.jumpStrength;
+                    }
+                },
+                update() {
+                    if (this.jumping) {
+                        this.y += this.jumpVelocity;
+                        this.jumpVelocity += this.gravity;
+                        
+                        if (this.y >= canvas.height - 100) {
+                            this.y = canvas.height - 100;
+                            this.jumping = false;
+                        }
+                    }
+                }
+            };
+            
+            // 地面
+            const ground = {
+                height: 30,
+                draw() {
+                    ctx.fillStyle = '#555';
+                    ctx.fillRect(0, canvas.height - this.height, canvas.width, this.height);
+                    
+                    // 绘制地面线条
+                    ctx.strokeStyle = '#333';
+                    ctx.lineWidth = 2;
+                    ctx.beginPath();
+                    ctx.moveTo(0, canvas.height - this.height);
+                    ctx.lineTo(canvas.width, canvas.height - this.height);
+                    ctx.stroke();
+                }
+            };
+            
+            // 障碍物
+            class Obstacle {
+                constructor() {
+                    this.width = 30;
+                    this.height = 50;
+                    this.x = canvas.width;
+                    this.y = canvas.height - this.height - ground.height;
+                    this.speed = gameSpeed;
+                    this.passed = false;
+                }
+                
+                draw() {
+                    ctx.fillStyle = '#c0392b';
+                    ctx.fillRect(this.x, this.y, this.width, this.height);
+                    
+                    // 绘制仙人掌刺
+                    ctx.fillStyle = '#27ae60';
+                    for (let i = 0; i < 3; i++) {
+                        ctx.fillRect(this.x + 10, this.y - 15 - (i * 10), 10, 15);
+                    }
+                }
+                
+                update() {
+                    this.x -= this.speed;
+                    
+                    // 碰撞检测
+                    if (
+                        dino.x < this.x + this.width &&
+                        dino.x + dino.width > this.x &&
+                        dino.y < this.y + this.height &&
+                        dino.y + dino.height > this.y
+                    ) {
+                        gameOver();
+                    }
+                    
+                    // 计分
+                    if (!this.passed && this.x + this.width < dino.x) {
+                        score++;
+                        this.passed = true;
+                    }
+                }
+            }
+            
+            // 云朵
+            class Cloud {
+                constructor() {
+                    this.width = 70;
+                    this.height = 40;
+                    this.x = canvas.width;
+                    this.y = Math.random() * (canvas.height / 3);
+                    this.speed = Math.random() * 2 + 1;
+                }
+                
+                draw() {
+                    ctx.fillStyle = 'rgba(255, 255, 255, 0.8)';
+                    ctx.beginPath();
+                    ctx.arc(this.x + 20, this.y + 20, 15, 0, Math.PI * 2);
+                    ctx.arc(this.x + 35, this.y + 15, 20, 0, Math.PI * 2);
+                    ctx.arc(this.x + 55, this.y + 20, 15, 0, Math.PI * 2);
+                    ctx.fill();
+                }
+                
+                update() {
+                    this.x -= this.speed;
+                }
+            }
+            
+            let obstacles = [];
+            let clouds = [];
+            
+            // 初始化恐龙图像
+            function initDinoImages() {
+                // 默认恐龙图像
+                dinoImages.default = new Image();
+                dinoImages.default.src = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 60 70'%3E%3Cpath d='M10,60 L20,40 L30,50 L40,40 L50,60 L10,60 M20,30 Q30,20 40,30' fill='%23333'/%3E%3Ccircle cx='25' cy='25' r='5' fill='white'/%3E%3C/svg%3E";
+                
+                // 其他颜色变种
+                dinoImages.green = new Image();
+                dinoImages.green.src = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 60 70'%3E%3Cpath d='M10,60 L20,40 L30,50 L40,40 L50,60 L10,60 M20,30 Q30,20 40,30' fill='%234CAF50'/%3E%3Ccircle cx='25' cy='25' r='5' fill='white'/%3E%3C/svg%3E";
+                
+                dinoImages.blue = new Image();
+                dinoImages.blue.src = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 60 70'%3E%3Cpath d='M10,60 L20,40 L30,50 L40,40 L50,60 L10,60 M20,30 Q30,20 40,30' fill='%232196F3'/%3E%3Ccircle cx='25' cy='25' r='5' fill='white'/%3E%3C/svg%3E";
+                
+                dinoImages.red = new Image();
+                dinoImages.red.src = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 60 70'%3E%3Cpath d='M10,60 L20,40 L30,50 L40,40 L50,60 L10,60 M20,30 Q30,20 40,30' fill='%23F44336'/%3E%3Ccircle cx='25' cy='25' r='5' fill='white'/%3E%3C/svg%3E";
+            }
+            
+            // 开始游戏
+            function startGame() {
+                gameRunning = true;
+                score = 0;
+                obstacles = [];
+                clouds = [];
+                frames = 0;
+                gameSpeed = 5;
+                startScreen.style.display = 'none';
+                gameOverScreen.style.display = 'none';
+                gameLoop();
+            }
+            
+            // 游戏结束
+            function gameOver() {
+                gameRunning = false;
+                
+                // 更新最高分
+                if (score > highScore) {
+                    highScore = score;
+                    localStorage.setItem('dinoHighScore', highScore);
+                    highScoreElement.textContent = highScore;
+                }
+                
+                finalScoreElement.textContent = score;
+                gameOverScreen.style.display = 'flex';
+            }
+            
+            // 游戏主循环
+            function gameLoop() {
+                if (!gameRunning) return;
+                
+                // 清除画布
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                
+                // 绘制背景
+                ctx.fillStyle = '#f7f7f7';
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+                
+                // 绘制云朵
+                clouds.forEach((cloud, index) => {
+                    cloud.update();
+                    cloud.draw();
+                    
+                    // 移除屏幕外的云朵
+                    if (cloud.x + cloud.width < 0) {
+                        clouds.splice(index, 1);
+                    }
+                });
+                
+                // 随机生成云朵
+                if (frames % 100 === 0) {
+                    clouds.push(new Cloud());
+                }
+                
+                // 绘制地面
+                ground.draw();
+                
+                // 更新和绘制恐龙
+                dino.update();
+                dino.draw();
+                
+                // 更新和绘制障碍物
+                obstacles.forEach((obstacle, index) => {
+                    obstacle.update();
+                    obstacle.draw();
+                    
+                    // 移除屏幕外的障碍物
+                    if (obstacle.x + obstacle.width < 0) {
+                        obstacles.splice(index, 1);
+                    }
+                });
+                
+                // 随机生成障碍物
+                if (frames % 100 === 0) {
+                    obstacles.push(new Obstacle());
+                }
+                
+                // 更新分数
+                scoreElement.textContent = score;
+                
+                // 随着分数增加游戏速度
+                gameSpeed = 5 + Math.floor(score / 10);
+                
+                frames++;
+                
+                requestAnimationFrame(gameLoop);
+            }
+            
+            // 事件监听
+            document.addEventListener('keydown', (e) => {
+                if (e.code === 'Space' || e.key === 'ArrowUp') {
+                    if (!gameRunning && startScreen.style.display !== 'none') {
+                        startGame();
+                    } else if (gameRunning) {
+                        dino.jump();
+                    }
+                }
+            });
+            
+            startButton.addEventListener('click', startGame);
+            restartButton.addEventListener('click', startGame);
+            jumpButton.addEventListener('click', () => {
+                if (gameRunning) dino.jump();
+            });
+            
+            // 恐龙选择
+            document.querySelectorAll('.dino-option').forEach(option => {
+                option.addEventListener('click', () => {
+                    document.querySelectorAll('.dino-option').forEach(opt => {
+                        opt.classList.remove('active');
+                    });
+                    option.classList.add('active');
+                    currentDino = option.dataset.dino;
+                    currentDinoElement.textContent = option.querySelector('img').alt;
+                });
+            });
+            
+            // 上传自定义恐龙
+            uploadArea.addEventListener('click', () => {
+                dinoUpload.click();
+            });
+            
+            dinoUpload.addEventListener('change', (e) => {
+                const file = e.target.files[0];
+                if (file) {
+                    const reader = new FileReader();
+                    reader.onload = (event) => {
+                        dinoImages.custom = new Image();
+                        dinoImages.custom.src = event.target.result;
+                        
+                        // 创建新的选项
+                        const newOption = document.createElement('div');
+                        newOption.className = 'dino-option active';
+                        newOption.dataset.dino = 'custom';
+                        newOption.innerHTML = `<img src="${event.target.result}" alt="自定义恐龙">`;
+                        
+                        // 移除之前的选择并添加新选项
+                        document.querySelectorAll('.dino-option').forEach(opt => {
+                            opt.classList.remove('active');
+                        });
+                        document.querySelector('.dino-options').appendChild(newOption);
+                        
+                        // 设置当前恐龙
+                        currentDino = 'custom';
+                        currentDinoElement.textContent = '自定义恐龙';
+                        
+                        // 添加事件监听
+                        newOption.addEventListener('click', () => {
+                            document.querySelectorAll('.dino-option').forEach(opt => {
+                                opt.classList.remove('active');
+                            });
+                            newOption.classList.add('active');
+                            currentDino = 'custom';
+                            currentDinoElement.textContent = '自定义恐龙';
+                        });
+                    };
+                    reader.readAsDataURL(file);
+                }
+            });
+            
+            // 初始化游戏
+            function init() {
+                highScoreElement.textContent = highScore;
+                initDinoImages();
+            }
+            
+            init();
+        });
+    </script>
+</body>
+</html>
