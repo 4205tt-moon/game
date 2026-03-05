@@ -1,0 +1,511 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <title>躲過1000秒・極限強化版｜難度滑桿＋造型敵人</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            user-select: none;
+        }
+        body {
+            background: #0a0c0f;
+            color: #eee;
+            text-align: center;
+            font-family: 'Microsoft JhengHei', Arial, sans-serif;
+            margin: 0;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+        .game-container {
+            background: #1a1e22;
+            border-radius: 28px;
+            padding: 25px 30px 30px;
+            box-shadow: 0 20px 35px rgba(0,0,0,0.8);
+            border: 1px solid #3f4b5e;
+        }
+        h2 {
+            margin: 0 0 12px 0;
+            font-weight: 400;
+            letter-spacing: 2px;
+            color: #9ecbff;
+            text-shadow: 0 0 8px cyan;
+        }
+        canvas {
+            background: #101419;
+            border: 4px solid #2b3b4f;
+            border-radius: 20px;
+            cursor: none;  /* 隱藏滑鼠 */
+            display: block;
+            margin: 0 auto;
+            box-shadow: inset 0 0 15px #00000088, 0 0 25px #000;
+        }
+        .control-panel {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            justify-content: center;
+            gap: 25px;
+            margin: 20px 0 10px;
+            background: #1f2a33;
+            padding: 12px 25px;
+            border-radius: 50px;
+            border: 1px solid #3e5f7a;
+        }
+        .slider-group {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            color: #bbd9ff;
+        }
+        .slider-group label {
+            font-size: 1.1rem;
+            font-weight: 500;
+            text-shadow: 0 0 5px deepskyblue;
+        }
+        #difficulty-slider {
+            width: 220px;
+            height: 6px;
+            background: #2e4155;
+            border-radius: 10px;
+            -webkit-appearance: none;
+        }
+        #difficulty-slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 22px;
+            height: 22px;
+            background: cyan;
+            border-radius: 50%;
+            cursor: pointer;
+            box-shadow: 0 0 15px cyan;
+            border: 2px solid white;
+        }
+        #multiplier-value {
+            min-width: 45px;
+            font-weight: bold;
+            color: #ffd966;
+            font-size: 1.3rem;
+        }
+        .btn {
+            background: #2d4055;
+            border: none;
+            color: white;
+            font-size: 1.1rem;
+            padding: 8px 28px;
+            border-radius: 40px;
+            letter-spacing: 1px;
+            cursor: pointer;
+            border: 1px solid #5f8bb9;
+            transition: 0.2s;
+            font-weight: 500;
+            box-shadow: 0 5px 0 #0f1a24;
+        }
+        .btn:hover {
+            background: #3e5e7e;
+            border-color: cyan;
+            transform: translateY(-2px);
+            box-shadow: 0 7px 0 #0f1a24;
+        }
+        .btn:active {
+            transform: translateY(3px);
+            box-shadow: 0 2px 0 #0f1a24;
+        }
+        /* 自訂勝負彈窗 (modal) */
+        .modal {
+            display: none;  /* 預設隱藏 */
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0, 0, 0, 0.85);
+            backdrop-filter: blur(3px);
+            justify-content: center;
+            align-items: center;
+            z-index: 999;
+            font-family: 'Microsoft JhengHei', sans-serif;
+        }
+        .modal-content {
+            background: #1d2b3a;
+            border: 2px solid #5aa9dd;
+            border-radius: 40px;
+            padding: 30px 50px;
+            text-align: center;
+            box-shadow: 0 0 60px cyan;
+            animation: modalPop 0.25s ease;
+        }
+        .modal-content h1 {
+            font-size: 4rem;
+            margin: 0 0 10px;
+            text-shadow: 0 0 20px red;
+            color: #ffb3b3;
+        }
+        .modal-content p {
+            font-size: 2rem;
+            margin: 15px 0 10px;
+            color: #fff8dd;
+        }
+        .modal-content .sub-message {
+            font-size: 1.2rem;
+            color: #b0d6ff;
+            margin-bottom: 25px;
+        }
+        .modal-btn {
+            background: cyan;
+            color: #111;
+            font-size: 1.8rem;
+            padding: 10px 40px;
+            border: none;
+            border-radius: 50px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: 0.2s;
+            box-shadow: 0 0 30px cyan;
+            border: 1px solid white;
+        }
+        .modal-btn:hover {
+            background: #8cf0ff;
+            transform: scale(1.05);
+            box-shadow: 0 0 50px cyan;
+        }
+        @keyframes modalPop {
+            0% { transform: scale(0.7); opacity: 0; }
+            100% { transform: scale(1); opacity: 1; }
+        }
+        .info-stats {
+            display: flex;
+            justify-content: space-between;
+            padding: 0 10px;
+            margin-top: 10px;
+            color: #ccddee;
+        }
+    </style>
+</head>
+<body>
+<div class="game-container">
+    <h2>能否躲過1000秒 · 強化版</h2>
+    <canvas id="game" width="800" height="600"></canvas>
+
+    <!-- 控制列：滑桿調整難度倍率 ＋ 重新開始按鈕 -->
+    <div class="control-panel">
+        <div class="slider-group">
+            <label>🔥 難度倍率</label>
+            <input type="range" id="difficulty-slider" min="0.4" max="2.8" step="0.1" value="1.0">
+            <span id="multiplier-value">1.0</span>
+        </div>
+        <button class="btn" id="reset-btn">🔄 重新開始</button>
+    </div>
+    <div class="info-stats">
+        <span>🖱️ 滑鼠控制青色方塊</span>
+        <span> 紅色為敵人敵人</span>
+    </div>
+</div>
+
+<!-- 自訂結果彈窗 (勝利/失敗共用) -->
+<div id="result-modal" class="modal">
+    <div class="modal-content">
+        <h1 id="modal-title">🏁 遊戲結束</h1>
+        <p id="modal-time">0 秒</p>
+        <div class="sub-message" id="modal-message">下次會更好！</div>
+        <button class="modal-btn" id="modal-replay">再玩一次</button>
+    </div>
+</div>
+
+<script>
+    (function() {
+        // ----- 取得 canvas 與繪圖上下文 -----
+        const canvas = document.getElementById("game");
+        const ctx = canvas.getContext("2d");
+
+        // ----- 遊戲核心變數 -----
+        let startTime = Date.now();                // 開始時間
+        let isGameOver = false;                    // 遊戲是否結束
+        let enemies = [];                           // 所有敵人物件陣列
+
+        // 玩家設定 (方形)
+        let player = {
+            x: 400,
+            y: 300,
+            size: 15
+        };
+
+        // 基礎難度參數 (會隨著秒數成長)
+        let baseSpeed = 2;                          // 基礎速度
+        let spawnRate = 0.03;                       // 基礎生成機率
+
+        // ★ 難度倍率 (滑桿控制) 初始 1.0
+        let difficultyMultiplier = 1.0;
+
+        // ----- UI 元素 -----
+        const slider = document.getElementById("difficulty-slider");
+        const multiplierSpan = document.getElementById("multiplier-value");
+        const resetBtn = document.getElementById("reset-btn");
+        const modal = document.getElementById("result-modal");
+        const modalTitle = document.getElementById("modal-title");
+        const modalTime = document.getElementById("modal-time");
+        const modalMessage = document.getElementById("modal-message");
+        const modalReplay = document.getElementById("modal-replay");
+
+        // ----- 滑桿事件：更新倍率顯示 -----
+        slider.addEventListener("input", (e) => {
+            difficultyMultiplier = parseFloat(e.target.value);
+            multiplierSpan.textContent = difficultyMultiplier.toFixed(1);
+        });
+
+        // ----- 自訂彈窗顯示函式  -----
+        function showResultModal(win, seconds) {
+            if (win) {
+                modalTitle.textContent = "✨ 奇蹟勝利 ✨";
+                modalTitle.style.color = "#ffef9f";
+                modalTime.textContent = `⏱️ ${seconds} 秒`;
+                modalMessage.textContent = "你竟然真的躲過了1000秒！毅力驚人！";
+            } else {
+                modalTitle.textContent = "💥 遊戲結束 💥";
+                modalTitle.style.color = "#ff9f9f";
+                modalTime.textContent = `⏱️ 你撐了 ${seconds} 秒`;
+                modalMessage.textContent = "調整難度再試一次吧～";
+            }
+            modal.style.display = "flex";   // 顯示彈窗
+        }
+
+        // ----- 重置遊戲 (重新開始) -----
+        function resetGame() {
+            // 隱藏彈窗
+            modal.style.display = "none";
+
+            // 重置遊戲狀態
+            isGameOver = false;
+            startTime = Date.now();                // 重新計時
+            enemies = [];                           // 清空敵人
+            player.x = 400;                         // 重置玩家位置 (畫布中心)
+            player.y = 300;
+            // 恢復基礎難度初始值 (時間重新計算)
+            baseSpeed = 2;
+            spawnRate = 0.03;
+
+
+            requestAnimationFrame(gameLoop);
+        }
+
+        // 監聽重置按鈕
+        resetBtn.addEventListener("click", resetGame);
+
+        // 監聽彈窗「再玩一次」按鈕
+        modalReplay.addEventListener("click", () => {
+            resetGame();
+        });
+
+        // ----- 滑鼠控制玩家 -----
+        canvas.addEventListener("mousemove", (e) => {
+            const rect = canvas.getBoundingClientRect();
+            // 讓方塊中心跟隨滑鼠 (減去半個尺寸讓中心對齊游標)
+            player.x = e.clientX - rect.left - player.size / 2;
+            player.y = e.clientY - rect.top - player.size / 2;
+            // 邊界限制 (避免方塊超出畫布)
+            player.x = Math.max(0, Math.min(canvas.width - player.size, player.x));
+            player.y = Math.max(0, Math.min(canvas.height - player.size, player.y));
+        });
+
+        // ----- 輔助函式：繪製心形 (左上角為基準，大小為 size) -----
+        function drawHeart(x, y, size) {
+            const cx = x + size / 2;
+            const cy = y + size / 2;
+            const w = size;
+            const h = size;
+
+            ctx.save();
+            ctx.translate(cx, cy);
+            ctx.beginPath();
+            
+            ctx.moveTo(0, h * 0.25);
+            ctx.bezierCurveTo(-w * 0.25, -h * 0.2, -w * 0.5, h * 0.1, 0, h * 0.5);
+            ctx.bezierCurveTo(w * 0.5, h * 0.1, w * 0.25, -h * 0.2, 0, h * 0.25);
+            ctx.closePath();
+            ctx.fillStyle = "#ff4444";
+            ctx.fill();
+            // 加一點光澤
+            ctx.shadowBlur = 12;
+            ctx.shadowColor = "#ff6666";
+            ctx.fill();
+            ctx.shadowBlur = 0;
+            ctx.restore();
+        }
+
+        // ----- 繪製敵人 (造型) -----
+        function drawEnemy(e) {
+            const { x, y, size, shape } = e;
+            ctx.save();
+            // 所有敵人基本紅色調，可加微陰影
+            ctx.shadowBlur = 10;
+            ctx.shadowColor = "#ff3333";
+            if (shape === 'rect') {
+                ctx.fillStyle = "#ff4444";
+                ctx.fillRect(x, y, size, size);
+            } else if (shape === 'circle') {
+                ctx.beginPath();
+                ctx.arc(x + size/2, y + size/2, size/2, 0, Math.PI*2);
+                ctx.fillStyle = "#ff5555";
+                ctx.fill();
+            } else if (shape === 'heart') {
+                drawHeart(x, y, size);  // 使用自訂心形函數
+            }
+            ctx.restore();
+        }
+
+        // ----- 生成新敵人 (加入造型屬性) -----
+        function spawnEnemy(seconds) {
+            let x, y, vx, vy;
+            const size = 12 + Math.random() * 15;       // 大小略隨機
+            // 速度 = 基礎速度 * 倍率 + 隨機增量
+            const speed = (baseSpeed + Math.random() * 1.8) * difficultyMultiplier;
+
+            // 隨機選擇造型：方形、圓形、心形 (三種)
+            const shapes = ['rect', 'circle', 'heart'];
+            const shape = shapes[Math.floor(Math.random() * shapes.length)];
+
+            // 根據秒數解鎖更多出生方向 (與原邏輯相同)
+            let directions = ['top'];
+            if (seconds >= 10) directions.push('bottom');
+            if (seconds >= 100) directions.push('left', 'right');
+
+            const dir = directions[Math.floor(Math.random() * directions.length)];
+
+            switch(dir) {
+                case 'top':
+                    x = Math.random() * canvas.width;
+                    y = -size;
+                    vx = (Math.random() - 0.5) * 2.2;
+                    vy = speed;
+                    break;
+                case 'bottom':
+                    x = Math.random() * canvas.width;
+                    y = canvas.height + size;
+                    vx = (Math.random() - 0.5) * 2.2;
+                    vy = -speed;
+                    break;
+                case 'left':
+                    x = -size;
+                    y = Math.random() * canvas.height;
+                    vx = speed;
+                    vy = (Math.random() - 0.5) * 2.2;
+                    break;
+                case 'right':
+                    x = canvas.width + size;
+                    y = Math.random() * canvas.height;
+                    vx = -speed;
+                    vy = (Math.random() - 0.5) * 2.2;
+                    break;
+            }
+
+            enemies.push({ x, y, size, vx, vy, shape });
+        }
+
+        // ----- 碰撞檢測 (維持矩形框，簡潔有力) -----
+        function checkCollision(p, e) {
+            return (
+                p.x < e.x + e.size &&
+                p.x + p.size > e.x &&
+                p.y < e.y + e.size &&
+                p.y + p.size > e.y
+            );
+        }
+
+        // ----- 動態難度調整 (隨秒數增加強度，再疊加倍率) -----
+        function updateDifficulty(seconds) {
+            // 階段基礎速度 (不受倍率影響，之後會乘)
+            if (seconds >= 900) baseSpeed = 10;
+            else if (seconds >= 700) baseSpeed = 8;
+            else if (seconds >= 500) baseSpeed = 7;
+            else if (seconds >= 250) baseSpeed = 6;
+            else if (seconds >= 150) baseSpeed = 5;
+            else if (seconds >= 100) baseSpeed = 4;
+            else if (seconds >= 10) baseSpeed = 3;
+
+            // 生成機率基礎值，乘上難度倍率 (但避免太誇張)
+            let rawSpawn = 0.03 + (seconds * 0.00015);
+            spawnRate = Math.min(0.18, rawSpawn * difficultyMultiplier); // 設個上限
+        }
+
+        // ----- 主要遊戲循環 -----
+        function gameLoop() {
+            if (isGameOver) {
+                // 若遊戲結束，不再繼續註冊下一幀，停止更新
+                return;
+            }
+
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            // 計算經過秒數
+            let seconds = Math.floor((Date.now() - startTime) / 1000);
+            updateDifficulty(seconds);    // 根據秒數調整基礎難度
+
+            // 繪製玩家 (青色方塊加光暈)
+            ctx.shadowBlur = 18;
+            ctx.shadowColor = "cyan";
+            ctx.fillStyle = "cyan";
+            ctx.fillRect(player.x, player.y, player.size, player.size);
+            ctx.shadowBlur = 0;
+
+            // 更新所有敵人位置 + 繪製 + 碰撞檢查
+            for (let i = enemies.length - 1; i >= 0; i--) {
+                let e = enemies[i];
+                e.x += e.vx;
+                e.y += e.vy;
+
+                // 根據造型繪製
+                drawEnemy(e);
+
+                // 碰撞檢測 (矩形框)
+                if (checkCollision(player, e)) {
+                    isGameOver = true;
+                    // 顯示失敗彈窗 (win = false)
+                    showResultModal(false, seconds);
+                    // 不再繼續註冊新幀 (直接return)
+                    return;
+                }
+
+                // 移除超出畫布太遠的敵人 (節省資源)
+                if (e.x < -100 || e.x > canvas.width + 100 || e.y < -100 || e.y > canvas.height + 100) {
+                    enemies.splice(i, 1);
+                }
+            }
+
+            // 顯示資訊 (秒數 / 目前難度等級)
+            ctx.fillStyle = "white";
+            ctx.font = "bold 24px 'Courier New', monospace";
+            ctx.fillText(`⏱️ ${seconds} 秒`, 20, 50);
+            ctx.font = "16px Arial";
+            // 顯示實際速度 (基礎速度*倍率)
+            let currentSpeed = (baseSpeed * difficultyMultiplier).toFixed(1);
+            ctx.fillStyle = "#bbb";
+            ctx.fillText(`速度等級 ${currentSpeed} (倍率 ×${difficultyMultiplier.toFixed(1)})`, 20, 80);
+
+            // 生成新敵人 (機率受 spawnRate 影響)
+            if (Math.random() < spawnRate) {
+                spawnEnemy(seconds);
+            }
+
+            // 勝利條件：撐過1000秒
+            if (seconds >= 1000) {
+                isGameOver = true;
+                showResultModal(true, seconds);
+                return;  // 結束，不繼續
+            }
+
+            // 繼續下一幀 (只有當遊戲未結束時)
+            requestAnimationFrame(gameLoop);
+        }
+
+        // 啟動遊戲循環
+        gameLoop();
+
+        // 額外處理：如果玩家滑鼠移出畫布，不讓方塊飛走，但保留最後位置，ok
+        // 萬一滑鼠離開視窗，至少停留原地，可接受
+
+        // 當彈窗出現時，背景遊戲已停止；重置後重新開始。
+        // 確保重置時若遊戲已經結束，重新呼叫gameLoop。
+        // resetGame 已包含 requestAnimationFrame(gameLoop)
+    })();
+</script>
+</body>
+</html>
