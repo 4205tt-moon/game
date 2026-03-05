@@ -149,10 +149,13 @@
             box-shadow: 0 8px 20px rgba(67, 97, 238, 0.4);
         }
         
+        /* 遊戲卡片圖標背景顏色 - 前四個保持原樣 */
         .game-card:nth-child(1) .game-icon { background: linear-gradient(135deg, #4361ee, #3a0ca3); }
         .game-card:nth-child(2) .game-icon { background: linear-gradient(135deg, #f72585, #b5179e); }
         .game-card:nth-child(3) .game-icon { background: linear-gradient(135deg, #4cc9f0, #4895ef); }
         .game-card:nth-child(4) .game-icon { background: linear-gradient(135deg, #ff9e00, #ff9100); }
+        /* 第五個卡片新配色：清新綠色/藍色調 */
+        .game-card:nth-child(5) .game-icon { background: linear-gradient(135deg, #06d6a0, #118ab2); }
         
         footer {
             text-align: center;
@@ -206,6 +209,8 @@
         .delay-2 { animation-delay: 0.4s; opacity: 0; }
         .delay-3 { animation-delay: 0.6s; opacity: 0; }
         .delay-4 { animation-delay: 0.8s; opacity: 0; }
+        /* 新增第五個延遲類 */
+        .delay-5 { animation-delay: 1.0s; opacity: 0; }
     </style>
 </head>
 <body>
@@ -217,8 +222,8 @@
             <h1>4205Game庫</h1>
             <div class="subtitle">精選遊戲集合 - 隨時暢玩</div>
             <p class="intro">
-                歡迎來到4205Game庫！這裡收集了各種有趣的網頁遊戲，點擊下方遊戲卡片即可開始遊玩。
-                所有遊戲均為精心挑選，保證讓您享受愉快的遊戲時光。
+                歡迎來到4205Game庫！這裡收集了各種有趣的網頁遊戲，
+		讓您享受愉快的遊戲時光點擊下方遊戲卡片即可開始遊玩。
             </p>
         </header>
         
@@ -235,7 +240,7 @@
                             在多彩的方塊世界展開激烈對戰！控制你的方塊擊敗對手，佔領更多領地。
                             簡單易上手，但需要策略思考才能取得最終勝利。
                         </p>
-                        <a href="Cube14.html" class="play-button">
+                        <a href="inex0014.html" class="play-button">
                             <i class="fas fa-play-circle"></i> 開始遊戲
                         </a>
                     </div>
@@ -291,19 +296,37 @@
                         </a>
                     </div>
                 </div>
+
+                <!-- 新增：閃避時刻遊戲 (Dodge time3) 使用時鐘圖示 -->
+                <div class="game-card fade-in delay-5">
+                    <div class="game-icon">
+                        <i class="fas fa-clock"></i>   <!-- 時鐘圖示代表時間壓力/閃避節奏 -->
+                    </div>
+                    <div class="game-content">
+                        <h2 class="game-title">閃避時刻</h2>
+                        <p class="game-description">
+                            考驗反應與速度！控制角色在時間內閃避從四面八方而來的障礙物。 
+                            每一次閃避都驚險刺激，你能在倒數結束前獲得高分嗎？
+                        </p>
+                        <a href="Dodge time3.html" class="play-button">
+                            <i class="fas fa-play-circle"></i> 開始遊戲
+                        </a>
+                    </div>
+                </div>
             </div>
             
             <div class="instructions fade-in">
                 <h3><i class="fas fa-info-circle"></i> 使用說明</h3>
                 <p>1. 點擊任意遊戲卡片上的「開始遊戲」按鈕即可進入遊戲頁面</p>
-                <p>2. 如果遊戲無法載入，請確認遊戲檔案(inex0014.html, Dinosaur Games.html, bee5.html, ant10.html)與本網頁位於相同目錄下</p>
-                <p>3. 本頁面完全響應式設計，可在手機、平板和電腦上正常顯示</p>
+                <p>2. 本頁面完全響應式設計，可在手機、平板和電腦上正常顯示</p>
+                
             </div>
         </main>
         
         <footer class="fade-in">
-            <p>4205Game庫 &copy; 2023 - 精選遊戲集合 | 設計：網頁設計專案</p>
+            <p>4205Game庫 &copy; 2025 - 精選遊戲集合 | 設計：網頁設計專案</p>
             <p>本網站僅供學習與娛樂使用，遊戲版權歸原作者所有</p>
+		// 2026/3/5版本
         </footer>
     </div>
 
