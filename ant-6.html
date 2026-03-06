@@ -1,0 +1,614 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>蟻巢生態 · 蟑螂入侵</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body { margin: 0; min-height: 100vh; background-color: #1e3a1e; display: flex; flex-direction: column; justify-content: center; align-items: center; font-family: 'Inter', sans-serif; padding: 1rem; box-sizing: border-box; }
+        .main-layout { display: flex; flex-direction: row; flex-wrap: wrap; justify-content: center; align-items: flex-start; gap: 1.5rem; max-width: 1200px; width: 100%; }
+        .left-column { flex: 0 0 auto; display: flex; flex-direction: column; align-items: center; gap: 1rem; max-width: 700px; width: 95vw; }
+        #game-container { width: 100%; height: 70vh; max-height: 700px; border-radius: 24px; box-shadow: 0 20px 30px rgba(0, 0, 0, 0.6); overflow: hidden; background-color: #8bc34a; position: relative; }
+        #game-canvas { display: block; width: 100%; height: 100%; background-color: transparent; cursor: crosshair; }
+        #control-panel { width: 100%; display: flex; flex-direction: column; align-items: center; gap: 12px; }
+        .button-row { display: flex; gap: 12px; flex-wrap: wrap; justify-content: center; }
+        .action-btn { background-color: #3a5e3a; color: white; border: none; border-radius: 40px; padding: 10px 24px; font-size: 1.1rem; font-weight: 600; box-shadow: 0 4px 10px rgba(0,0,0,0.4); cursor: pointer; transition: background 0.2s, transform 0.1s; border: 1px solid #a5d6a5; }
+        .action-btn:hover { background-color: #2d4a2d; }
+        .action-btn:active { transform: scale(0.96); }
+        #external-info-box { width: 280px; background-color: rgba(20, 20, 20, 0.95); backdrop-filter: blur(4px); color: white; padding: 20px 18px; border-radius: 32px; font-size: 1.1rem; box-shadow: 0 10px 25px rgba(0, 0, 0, 0.7); border: 2px solid #c7a35b; display: none; flex-shrink: 0; }
+        #external-info-box.show { display: block; }
+        .stat-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px 16px; margin: 10px 0 5px; }
+        .stat-item { display: flex; justify-content: space-between; gap: 10px; }
+        .stat-value { color: #ffd966; font-weight: 700; }
+        .hint { font-size: 0.85rem; opacity: 0.8; margin-top: 16px; color: #ddd; line-height: 1.4; }
+        .badge { background: #8b4513; color: #ffecb3; padding: 2px 8px; border-radius: 20px; font-size: 0.9rem; margin-left: 5px; }
+        @media (max-width: 800px) { .main-layout { flex-direction: column; align-items: center; } #external-info-box { width: 95vw; max-width: 700px; } }
+    </style>
+</head>
+<body>
+    <div class="main-layout">
+        <div class="left-column">
+            <div id="game-container"><canvas id="game-canvas"></canvas></div>
+            <div id="control-panel">
+                <div class="button-row">
+                    <button id="info-toggle-btn" class="action-btn">🐜 蟻巢資訊 🐜</button>
+                    <button id="upgrade-btn" class="action-btn">⬆️ 升級蟻巢 (80%上限)</button>
+                </div>
+            </div>
+        </div>
+        <div id="external-info-box">
+            <div class="stat-grid">
+                <div class="stat-item"><span>🍯 點心</span><span id="food-storage" class="stat-value">0/0</span></div>
+                <div class="stat-item"><span>🏰 蟻巢等級</span><span id="anthill-level" class="stat-value">1</span></div>
+                <div class="stat-item"><span>👑 蟻后</span><span id="queen-count" class="stat-value">1</span></div>
+                <div class="stat-item"><span>🐜 工蟻</span><span id="worker-count" class="stat-value">0</span></div>
+                <div class="stat-item"><span>🪳 蟑螂</span><span id="roach-count" class="stat-value">0</span></div>
+            </div>
+            <div class="hint">
+                👆 點擊草地消耗1🍯召喚工蟻<br>
+                ⏱️ 每30秒蟻后-2🍯，工蟻-1🍯<br>
+                🍎 點心會再生·腐爛<br>
+                🪳 蟑螂會吃點心、攻擊蟻后！工蟻會主動攻擊(距離30)
+            </div>
+        </div>
+    </div>
+
+    <script type="module">
+        const canvas = document.getElementById('game-canvas');
+        const ctx = canvas.getContext('2d');
+        let GAME_WIDTH = 0, GAME_HEIGHT = 0;
+        const BASE_ANTHILL_RADIUS = 20;
+        let anthillLevel = 1;
+        let anthillRadius = BASE_ANTHILL_RADIUS;
+        const ANTHILL_CENTER = { x: 0, y: 0 };
+
+        let foodStorage = 10;
+        let maxFoodStorage = 20;
+        const WORKER_COST = 1;
+        const UPGRADE_RATIO = 0.8;
+
+        let ants = [];
+        let antIdCounter = 0;
+        
+        // 點心塊全新機制：內建再生冷卻
+        let treats = [];
+        const TREAT_LIFESPAN = 20000;      // 存活時間 (毫秒)
+        const REGEN_COOLDOWN = 8000;        // 再生冷卻 8秒
+        const MAX_TREATS = 8;               // 最大點心數量 (固定, 每個點獨立再生)
+
+        // 蟑螂陣列
+        let roaches = [];
+        const ROACH_SPEED = 1.2;
+        const ROACH_SIZE = 12;
+        const ROACH_HP = 5;                  // 需要攻擊5次才擊敗
+        const ROACH_REGEN_TIME = 25000;       // 死亡後25秒再生一隻
+        let lastRoachSpawnTime = 0;
+
+        let lastConsumeTime = performance.now();
+        const CONSUME_INTERVAL = 30000;
+        let gameOver = false;
+
+        // UI 元素
+        const foodSpan = document.getElementById('food-storage');
+        const levelSpan = document.getElementById('anthill-level');
+        const queenSpan = document.getElementById('queen-count');
+        const workerSpan = document.getElementById('worker-count');
+        const roachSpan = document.getElementById('roach-count');
+        const infoBox = document.getElementById('external-info-box');
+        const toggleBtn = document.getElementById('info-toggle-btn');
+        const upgradeBtn = document.getElementById('upgrade-btn');
+
+        // 輔助函式: 計算螞蟻數量
+        function countAnts() {
+            let queen = 0, worker = 0;
+            ants.forEach(a => { if (a.type === 'queen') queen++; else worker++; });
+            return { queen, worker };
+        }
+
+        // 更新UI
+        function updateUI() {
+            foodSpan.textContent = `${Math.floor(foodStorage)}/${maxFoodStorage}`;
+            levelSpan.textContent = anthillLevel;
+            const cnt = countAnts();
+            queenSpan.textContent = cnt.queen;
+            workerSpan.textContent = cnt.worker;
+            roachSpan.textContent = roaches.length;
+        }
+
+        // ---------- 點心再生機制 (不刪除物件, 使用amount=0與regenUntil) ----------
+        function initializeTreats() {
+            treats = [];
+            for (let i = 0; i < MAX_TREATS; i++) {
+                const margin = 30;
+                const x = Math.random() * (GAME_WIDTH - 2 * margin) + margin;
+                const y = Math.random() * (GAME_HEIGHT - 2 * margin) + margin;
+                const amount = Math.floor(Math.random() * 3) + 1;
+                treats.push({
+                    x, y,
+                    amount: amount,
+                    reserved: 0,
+                    spawnTime: performance.now(),    // 用於腐爛計時
+                    regenUntil: 0                      // 0 表示正常活躍; >0 表示再生中, 儲存可重生時間
+                });
+            }
+        }
+
+        // 將點心設為「耗盡/腐爛」並進入再生冷卻
+        function setTreatDepleted(treat, now) {
+            if (treat.amount <= 0 && treat.regenUntil > now) return; // 已經在再生中
+            treat.amount = 0;
+            treat.reserved = 0;               // 清除任何預約
+            treat.regenUntil = now + REGEN_COOLDOWN;
+            // 讓所有螞蟻放棄這個點心 (他們會在更新中檢查)
+        }
+
+        // 更新所有點心 (再生 & 腐爛)
+        function updateTreats(now) {
+            for (let treat of treats) {
+                // 情況1: 處於再生冷卻中，檢查是否該重生
+                if (treat.amount <= 0 && treat.regenUntil > 0 && now >= treat.regenUntil) {
+                    // 重生
+                    treat.amount = Math.floor(Math.random() * 3) + 1;
+                    treat.reserved = 0;
+                    treat.spawnTime = now;           // 重置腐爛計時
+                    treat.regenUntil = 0;             // 取消再生標記
+                }
+                // 情況2: 活躍點心，檢查是否腐爛 (生存時間到)
+                else if (treat.amount > 0 && now - treat.spawnTime > TREAT_LIFESPAN) {
+                    setTreatDepleted(treat, now);
+                }
+            }
+        }
+
+        // 移除某點心的預約 (當螞蟻放棄目標時呼叫)
+        function releaseTreatReservation(treat) {
+            if (treat && treat.reserved > 0) treat.reserved--;
+        }
+
+        // ---------- 蟑螂類 ----------
+        class Roach {
+            constructor(x, y) {
+                this.x = x; this.y = y;
+                this.size = ROACH_SIZE;
+                this.speed = ROACH_SPEED;
+                this.hp = ROACH_HP;
+                this.targetTreat = null;      // 鎖定的點心
+                this.mode = 'seekTreat';       // 'seekTreat' 或 'chaseQueen'
+                this.angle = Math.random() * 2 * Math.PI;
+            }
+
+            // 尋找最近且活躍的點心 (amount>0)
+            findNearestActiveTreat() {
+                let best = null; let bestDist = Infinity;
+                for (let t of treats) {
+                    if (t.amount <= 0) continue;   // 只鎖定有食物的點心
+                    const d = Math.hypot(t.x - this.x, t.y - this.y);
+                    if (d < bestDist) { bestDist = d; best = t; }
+                }
+                return best;
+            }
+
+            // 尋找蟻后位置 (回距離最近的蟻后)
+            findQueen() {
+                let queenAnt = ants.find(a => a.type === 'queen');
+                return queenAnt ? { x: queenAnt.x, y: queenAnt.y } : null;
+            }
+
+            update(now) {
+                // 1. 偵測蟻后距離 (若存在且距離<30, 切換為追殺蟻后)
+                const queenPos = this.findQueen();
+                if (queenPos) {
+                    const distToQueen = Math.hypot(queenPos.x - this.x, queenPos.y - this.y);
+                    if (distToQueen < 30) {
+                        this.mode = 'chaseQueen';
+                        this.targetTreat = null;   // 放棄點心
+                    } else {
+                        // 超出範圍就恢復覓食 (但若原本就是chaseQueen但距離拉遠, 可以重置)
+                        if (this.mode === 'chaseQueen') {
+                            this.mode = 'seekTreat';
+                        }
+                    }
+                } else {
+                    // 蟻后死亡 -> 保持原模式或覓食
+                    this.mode = 'seekTreat';
+                }
+
+                if (this.mode === 'chaseQueen' && queenPos) {
+                    // 朝蟻后移動
+                    const dx = queenPos.x - this.x;
+                    const dy = queenPos.y - this.y;
+                    const dist = Math.hypot(dx, dy);
+                    if (dist > 1) {
+                        this.angle = Math.atan2(dy, dx);
+                    }
+                    // 攻擊判定：如果非常接近蟻后，遊戲結束
+                    if (dist < 15) {
+                        triggerGameOver('蟻后被蟑螂攻擊... 蟻巢滅亡');
+                    }
+                } else {
+                    // 覓食模式：找點心
+                    if (!this.targetTreat || this.targetTreat.amount <= 0) {
+                        this.targetTreat = this.findNearestActiveTreat();
+                    }
+                    if (this.targetTreat) {
+                        const dx = this.targetTreat.x - this.x;
+                        const dy = this.targetTreat.y - this.y;
+                        const distToTreat = Math.hypot(dx, dy);
+                        if (distToTreat < this.size + 8) {
+                            // 吃掉整個點心！ (amount歸零並進入再生)
+                            if (this.targetTreat.amount > 0) {
+                                setTreatDepleted(this.targetTreat, now);
+                                // 蟑螂飽食? 不增加點心, 單純破壞
+                            }
+                            this.targetTreat = null;  // 找下一個
+                        } else {
+                            this.angle = Math.atan2(dy, dx);
+                        }
+                    } else {
+                        // 沒點心就隨機晃
+                        this.angle += (Math.random() - 0.5) * 0.2;
+                    }
+                }
+
+                // 移動
+                this.x += Math.cos(this.angle) * this.speed;
+                this.y += Math.sin(this.angle) * this.speed;
+                // 邊界反彈 (不出去)
+                const m = this.size;
+                if (this.x < m) { this.x = m; this.angle = Math.PI - this.angle; }
+                else if (this.x > GAME_WIDTH - m) { this.x = GAME_WIDTH - m; this.angle = Math.PI - this.angle; }
+                if (this.y < m) { this.y = m; this.angle = -this.angle; }
+                else if (this.y > GAME_HEIGHT - m) { this.y = GAME_HEIGHT - m; this.angle = -this.angle; }
+            }
+
+            draw() {
+                // 咖啡色蟑螂
+                ctx.fillStyle = '#5D3A1A';
+                ctx.beginPath(); ctx.ellipse(this.x, this.y, this.size*0.9, this.size*0.6, 0, 0, Math.PI*2); ctx.fill();
+                ctx.fillStyle = '#8B4513';
+                ctx.beginPath(); ctx.ellipse(this.x-3, this.y-3, 3, 2, 0, 0, Math.PI*2); ctx.fill(); // 觸角?
+                ctx.fillStyle = '#D2B48C';
+                ctx.font = 'bold 10px monospace'; ctx.fillText('🪳', this.x-8, this.y-10);
+                // 血條
+                ctx.fillStyle = '#ff4d4d';
+                ctx.fillRect(this.x-10, this.y-18, 20 * (this.hp/ROACH_HP), 4);
+            }
+        }
+
+        // 生成一隻蟑螂 (隨機位置)
+        function spawnRoach() {
+            if (gameOver) return;
+            const margin = 40;
+            const x = Math.random() * (GAME_WIDTH - 2 * margin) + margin;
+            const y = Math.random() * (GAME_HEIGHT - 2 * margin) + margin;
+            roaches.push(new Roach(x, y));
+            lastRoachSpawnTime = performance.now();
+        }
+
+        // ---------- 螞蟻類 (擴增攻擊) ----------
+        class Ant {
+            constructor(x, y, type = 'worker') {
+                this.id = antIdCounter++;
+                this.type = type;
+                this.size = Math.random() * 1.5 + 2;
+                this.x = x; this.y = y;
+                this.speed = type === 'queen' ? 0.8 : (Math.random() * 0.5 + 1.0);
+                this.angle = Math.random() * 2 * Math.PI;
+                this.maxTurnRate = 0.15;
+                this.mode = 'forage';           // forage, return, attack
+                this.targetTreat = null;
+                this.targetRoach = null;         // 攻擊目標蟑螂
+                this.carrying = false;
+                this.color = type === 'queen' ? '#cf9f2f' : '#2c2c2c';   // 工蟻黑色
+                this.lastAttackTime = 0;
+                this.attackCooldown = 800;       // 毫秒
+            }
+
+            // 尋找最近且未預約滿的點心 (加入預約)
+            findNearestTreat() {
+                let best = null; let bestDist = Infinity;
+                for (let t of treats) {
+                    if (t.amount - t.reserved <= 0) continue;
+                    const d = Math.hypot(t.x - this.x, t.y - this.y);
+                    if (d < bestDist) { bestDist = d; best = t; }
+                }
+                if (best) best.reserved++;
+                return best;
+            }
+
+            // 尋找最近的蟑螂
+            findNearestRoach() {
+                let best = null; let bestDist = Infinity;
+                for (let r of roaches) {
+                    if (r.hp <= 0) continue;
+                    const d = Math.hypot(r.x - this.x, r.y - this.y);
+                    if (d < bestDist) { bestDist = d; best = r; }
+                }
+                return best;
+            }
+
+            // 蟻后更新 (漫遊)
+            updateQueen() {
+                const dx = ANTHILL_CENTER.x - this.x;
+                const dy = ANTHILL_CENTER.y - this.y;
+                const distToCenter = Math.hypot(dx, dy);
+                if (distToCenter > anthillRadius * 1.8) {
+                    const targetAngle = Math.atan2(dy, dx);
+                    this.angle = this.angle * 0.7 + targetAngle * 0.3;
+                } else {
+                    this.angle += (Math.random() - 0.5) * this.maxTurnRate;
+                }
+                this.moveAndBound();
+            }
+
+            // 工蟻更新 (採集 + 攻擊)
+            updateWorker(now) {
+                // 優先偵測蟑螂：如果發現距離<25的蟑螂，進入攻擊模式
+                const nearbyRoach = this.findNearestRoach();
+                if (nearbyRoach && Math.hypot(nearbyRoach.x - this.x, nearbyRoach.y - this.y) < 25) {
+                    this.mode = 'attack';
+                    this.targetRoach = nearbyRoach;
+                    // 若之前有點心預約，釋放
+                    if (this.targetTreat) {
+                        releaseTreatReservation(this.targetTreat);
+                        this.targetTreat = null;
+                    }
+                } else {
+                    // 沒有蟑螂威脅，若之前是攻擊模式則切回覓食
+                    if (this.mode === 'attack') {
+                        this.mode = 'forage';
+                        this.targetRoach = null;
+                    }
+                }
+
+                if (this.mode === 'attack' && this.targetRoach && this.targetRoach.hp > 0) {
+                    // 攻擊移動
+                    const dx = this.targetRoach.x - this.x;
+                    const dy = this.targetRoach.y - this.y;
+                    const dist = Math.hypot(dx, dy);
+                    if (dist > 5) {
+                        const targetAngle = Math.atan2(dy, dx);
+                        this.angle = this.angle * 0.6 + targetAngle * 0.4;
+                        this.moveAndBound();
+                    }
+                    // 攻擊冷卻
+                    if (dist < 12 && now - this.lastAttackTime >= this.attackCooldown) {
+                        this.targetRoach.hp -= 1;   // 工蟻攻擊力1
+                        this.lastAttackTime = now;
+                        if (this.targetRoach.hp <= 0) {
+                            // 蟑螂死亡，獲得10點心
+                            foodStorage = Math.min(foodStorage + 10, maxFoodStorage);
+                            // 移除蟑螂
+                            roaches = roaches.filter(r => r !== this.targetRoach);
+                            this.mode = 'forage';
+                            this.targetRoach = null;
+                            // 可考慮重生蟑螂，由主循環重生
+                        }
+                    }
+                } else {
+                    // 正常採集邏輯 (forage / return)
+                    if (this.mode === 'forage') {
+                        if (!this.targetTreat) {
+                            this.targetTreat = this.findNearestTreat();
+                            if (!this.targetTreat) {
+                                this.angle += (Math.random() - 0.5) * this.maxTurnRate;
+                                this.moveAndBound();
+                                return;
+                            }
+                        }
+                        const dx = this.targetTreat.x - this.x;
+                        const dy = this.targetTreat.y - this.y;
+                        if (Math.hypot(dx, dy) < this.size + 5) {
+                            // 抵達點心，搬運
+                            if (this.targetTreat.amount > 0) {
+                                this.targetTreat.amount--;
+                                this.targetTreat.reserved--;
+                                this.carrying = true;
+                                this.mode = 'return';
+                                if (this.targetTreat.amount <= 0) {
+                                    // 點心耗盡，進入再生冷卻
+                                    setTreatDepleted(this.targetTreat, now);
+                                }
+                                this.targetTreat = null;
+                            } else {
+                                // 可能瞬間歸零，釋放預約
+                                releaseTreatReservation(this.targetTreat);
+                                this.targetTreat = null;
+                            }
+                        } else {
+                            const targetAngle = Math.atan2(dy, dx);
+                            this.angle = this.angle * 0.6 + targetAngle * 0.4;
+                            this.moveAndBound();
+                        }
+                    } else if (this.mode === 'return') {
+                        const dx = ANTHILL_CENTER.x - this.x;
+                        const dy = ANTHILL_CENTER.y - this.y;
+                        if (Math.hypot(dx, dy) < anthillRadius + 5) {
+                            if (this.carrying) { 
+                                foodStorage = Math.min(foodStorage + 1, maxFoodStorage); 
+                                this.carrying = false; 
+                            }
+                            this.mode = 'forage';
+                        } else {
+                            const targetAngle = Math.atan2(dy, dx);
+                            this.angle = this.angle * 0.6 + targetAngle * 0.4;
+                            this.moveAndBound();
+                        }
+                    }
+                }
+            }
+
+            moveAndBound() {
+                this.x += Math.cos(this.angle) * this.speed;
+                this.y += Math.sin(this.angle) * this.speed;
+                const m = this.size;
+                if (this.x < m) { this.x = m; this.angle = Math.PI - this.angle; }
+                else if (this.x > GAME_WIDTH - m) { this.x = GAME_WIDTH - m; this.angle = Math.PI - this.angle; }
+                if (this.y < m) { this.y = m; this.angle = -this.angle; }
+                else if (this.y > GAME_HEIGHT - m) { this.y = GAME_HEIGHT - m; this.angle = -this.angle; }
+            }
+
+            draw() {
+                // 原有外觀 (蟻后金橘色 / 工蟻黑色)
+                ctx.fillStyle = this.color;
+                ctx.beginPath(); ctx.arc(this.x, this.y, this.size, 0, Math.PI*2); ctx.fill();
+                const headSize = this.size * 0.7;
+                const headX = this.x + Math.cos(this.angle) * (this.size + headSize * 0.4);
+                const headY = this.y + Math.sin(this.angle) * (this.size + headSize * 0.4);
+                ctx.beginPath(); ctx.arc(headX, headY, headSize, 0, Math.PI*2); ctx.fill();
+                ctx.strokeStyle = this.color; ctx.lineWidth = 1.2;
+                for (let s of [-1,1]) {
+                    ctx.beginPath(); ctx.moveTo(headX, headY);
+                    ctx.lineTo(headX + Math.cos(this.angle + s*Math.PI/6)*this.size*1.8, headY + Math.sin(this.angle + s*Math.PI/6)*this.size*1.8);
+                    ctx.stroke();
+                }
+                if (this.carrying) { ctx.fillStyle = '#ffeb99'; ctx.beginPath(); ctx.arc(this.x - 2, this.y - 3, 2.5, 0, 2*Math.PI); ctx.fill(); }
+            }
+        }
+
+        // ---------- 消耗點心 (修改: 死亡釋放預約) ----------
+        function consumeFood() {
+            if (gameOver) return;
+            const cnt = countAnts();
+            const req = cnt.queen * 2 + cnt.worker * 1;
+            if (foodStorage >= req) {
+                foodStorage -= req;
+            } else {
+                foodStorage = 0;
+                let def = req;
+                // 從陣列後面刪除工蟻，並釋放預約
+                for (let i = ants.length - 1; i >= 0; i--) {
+                    const ant = ants[i];
+                    if (ant.type === 'worker') {
+                        if (ant.targetTreat) {
+                            releaseTreatReservation(ant.targetTreat);
+                        }
+                        ants.splice(i, 1);
+                        def--;
+                        if (def <= 0) break;
+                    }
+                }
+                if (def > 0 && countAnts().queen > 0) {
+                    triggerGameOver('蟻后餓死了⋯');
+                }
+            }
+        }
+
+        function triggerGameOver(msg) {
+            if (gameOver) return;
+            gameOver = true;
+            ants = ants.filter(a => a.type !== 'queen');
+            setTimeout(() => alert(msg), 100);
+        }
+
+        // 遊戲主循環
+        function gameLoop() {
+            const now = performance.now();
+            if (!gameOver) {
+                // 定時消耗
+                if (now - lastConsumeTime >= CONSUME_INTERVAL) { 
+                    consumeFood(); 
+                    lastConsumeTime = now; 
+                }
+
+                // 更新點心 (再生與腐爛)
+                updateTreats(now);
+
+                // 更新螞蟻
+                ants.forEach(a => {
+                    if (a.type === 'queen') a.updateQueen();
+                    else a.updateWorker(now);
+                });
+
+                // 更新蟑螂
+                roaches.forEach(r => r.update(now));
+                // 移除hp<=0的蟑螂 (安全檢查)
+                roaches = roaches.filter(r => r.hp > 0);
+
+                // 控制蟑螂數量: 最多同時1隻, 死亡後重生
+                if (roaches.length === 0 && now - lastRoachSpawnTime > ROACH_REGEN_TIME) {
+                    spawnRoach();
+                }
+            }
+
+            drawScene();
+            requestAnimationFrame(gameLoop);
+        }
+
+        function drawScene() {
+            ctx.fillStyle = '#8bc34a'; ctx.fillRect(0, 0, GAME_WIDTH, GAME_HEIGHT);
+            const cx = GAME_WIDTH/2; const cy = GAME_HEIGHT/2;
+            ANTHILL_CENTER.x = cx; ANTHILL_CENTER.y = cy;
+            ctx.fillStyle = '#222'; ctx.beginPath(); ctx.arc(cx, cy, anthillRadius, 0, 2*Math.PI); ctx.fill();
+
+            // 繪製點心 (只繪製 amount>0)
+            treats.forEach(t => {
+                if (t.amount <= 0) return;
+                const r = 5 + t.amount * 2; 
+                ctx.fillStyle = '#f06292'; 
+                ctx.beginPath(); ctx.arc(t.x, t.y, r, 0, 2*Math.PI); ctx.fill();
+                ctx.fillStyle = '#222'; 
+                ctx.font = 'bold 11px monospace'; 
+                ctx.fillText(t.amount, t.x-5, t.y+5);
+            });
+
+            // 繪製螞蟻
+            ants.forEach(a => a.draw());
+
+            // 繪製蟑螂
+            roaches.forEach(r => r.draw());
+
+            if (gameOver) {
+                ctx.fillStyle = 'rgba(0,0,0,0.6)'; ctx.fillRect(0, GAME_HEIGHT/2-30, GAME_WIDTH, 60);
+                ctx.font = 'bold 28px sans-serif'; ctx.fillStyle = '#ffd966'; ctx.textAlign = 'center'; ctx.fillText('💀 遊戲結束 💀', GAME_WIDTH/2, GAME_HEIGHT/2+10);
+            }
+            updateUI();
+        }
+
+        function resize() {
+            const container = document.getElementById('game-container');
+            GAME_WIDTH = container.clientWidth; GAME_HEIGHT = container.clientHeight;
+            canvas.width = GAME_WIDTH; canvas.height = GAME_HEIGHT;
+        }
+
+        window.addEventListener('resize', resize);
+
+        canvas.addEventListener('mousedown', (e) => {
+            const rect = canvas.getBoundingClientRect();
+            const x = e.clientX - rect.left; const y = e.clientY - rect.top;
+            if (!gameOver && foodStorage >= WORKER_COST) { 
+                foodStorage -= WORKER_COST; 
+                ants.push(new Ant(x, y, 'worker')); 
+            }
+        });
+
+        toggleBtn.addEventListener('click', () => { 
+            infoBox.classList.toggle('show');
+            toggleBtn.textContent = infoBox.classList.contains('show') ? '🕳️ 隱藏資訊 🕳️' : '🐜 蟻巢資訊 🐜';
+        });
+
+        upgradeBtn.addEventListener('click', () => {
+            const cost = Math.floor(maxFoodStorage * UPGRADE_RATIO);
+            if (foodStorage >= cost) { 
+                foodStorage -= cost; 
+                anthillLevel++; 
+                maxFoodStorage += 10; 
+                anthillRadius += 8; 
+            } else alert(`點心不足，需要 ${cost} 🍯`);
+        });
+
+        // 初始化遊戲
+        window.onload = () => { 
+            resize(); 
+            // 初始化點心 (固定數量)
+            initializeTreats();
+            // 產生蟻后
+            ants.push(new Ant(GAME_WIDTH/2, GAME_HEIGHT/2, 'queen')); 
+            // 產生第一隻蟑螂
+            lastRoachSpawnTime = performance.now() - ROACH_REGEN_TIME + 2000; // 2秒後出現
+            gameLoop(); 
+        };
+    </script>
+</body>
+</html>
