@@ -1,0 +1,650 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>像素塔防 · 全面增強版 (Bug修復)</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body { background-color: #1a1a1a; margin: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        canvas { display: block; background: #2d3436; cursor: crosshair; border-radius: 0.5rem; box-shadow: 0 20px 25px -5px rgba(0,0,0,0.5); }
+        .tower-card { transition: all 0.2s; border-width: 2px; }
+        .tower-card:hover { transform: translateY(-5px); border-color: #fbbf24; }
+        .tower-card.selected { border-color: #f59e0b; background: rgba(245, 158, 11, 0.2); }
+        #tower-menu { background: rgba(255,255,255,0.9); backdrop-filter: blur(4px); }
+        .speed-btn { background: #2c3e50; color: white; padding: 4px 12px; border-radius: 9999px; font-weight: 600; transition: 0.2s; }
+        .speed-btn.active { background: #f59e0b; color: black; }
+        .speed-btn:hover { background: #4a6b8a; }
+    </style>
+</head>
+<body class="flex flex-col items-center justify-center min-h-screen p-4">
+
+    <!-- 頂部資訊列 -->
+    <div class="w-[900px] mb-2 flex justify-between items-center text-white bg-black/50 p-3 rounded-lg backdrop-blur-md">
+        <div class="flex gap-6">
+            <p class="text-xl font-bold text-yellow-400">💰 金幣: <span id="money-display">900</span></p>
+            <p class="text-lg">❤️ 生命: <span id="health-display">20</span></p>
+            <p class="text-lg">🌊 波次: <span id="wave-display">1</span> / 10</p>
+        </div>
+        <div class="flex gap-2 items-center">
+            <div class="flex gap-1 mr-2">
+                <button id="speed1" class="speed-btn active">1x</button>
+                <button id="speed2" class="speed-btn">2x</button>
+                <button id="speed4" class="speed-btn">4x</button>
+            </div>
+            <button id="start-wave-btn" class="bg-red-600 hover:bg-red-700 text-white px-6 py-2 rounded-full font-bold transition shadow-lg">開始進攻</button>
+        </div>
+    </div>
+
+    <!-- 畫布容器 -->
+    <div id="game-container" class="relative border-4 border-gray-700 rounded-lg overflow-hidden shadow-2xl">
+        <canvas id="gameCanvas" width="900" height="600"></canvas>
+    </div>
+
+    <!-- 底部建造欄 (八座塔) -->
+    <div class="w-[900px] mt-2 flex justify-center">
+        <div class="bg-black/60 p-3 rounded-xl backdrop-blur-md flex gap-4 border border-white/10 shadow-2xl">
+            <div class="tower-card cursor-pointer border-transparent p-1 rounded-lg flex flex-col items-center" onclick="selectTower('archer')">
+                <img src="Turret/Tower01.png" class="w-12 h-12 object-contain rounded" alt="Archer" onerror="this.src='data:image/svg+xml;utf8,<svg xmlns=\'http://www.w3.org/2000/svg\' width=\'48\' height=\'48\' viewBox=\'0 0 48 48\' fill=\'%23e67e22\'><circle cx=\'24\' cy=\'24\' r=\'20\' /></svg>'">
+                <span class="text-xs text-white mt-1">弓箭($100)</span>
+            </div>
+            <div class="tower-card cursor-pointer border-transparent p-1 rounded-lg flex flex-col items-center" onclick="selectTower('cannon')">
+                <img src="Turret/Tower02.png" class="w-12 h-12 object-contain rounded" alt="Cannon" onerror="this.src='data:image/svg+xml;utf8,<svg xmlns=\'http://www.w3.org/2000/svg\' width=\'48\' height=\'48\' viewBox=\'0 0 48 48\' fill=\'%2395a5a6\'><rect x=\'12\' y=\'16\' width=\'24\' height=\'16\' /></svg>'">
+                <span class="text-xs text-white mt-1">火砲($150)</span>
+            </div>
+            <div class="tower-card cursor-pointer border-transparent p-1 rounded-lg flex flex-col items-center" onclick="selectTower('mg')">
+                <img src="Turret/Tower04.png" class="w-12 h-12 object-contain rounded" alt="MG" onerror="this.src='data:image/svg+xml;utf8,<svg xmlns=\'http://www.w3.org/2000/svg\' width=\'48\' height=\'48\' viewBox=\'0 0 48 48\' fill=\'%237f8c8d\'><rect x=\'8\' y=\'18\' width=\'32\' height=\'8\' /></svg>'">
+                <span class="text-xs text-white mt-1">機槍($200)</span>
+            </div>
+            <div class="tower-card cursor-pointer border-transparent p-1 rounded-lg flex flex-col items-center" onclick="selectTower('laser')">
+                <img src="Turret/Tower03.png" class="w-12 h-12 object-contain rounded" alt="Laser" onerror="this.src='data:image/svg+xml;utf8,<svg xmlns=\'http://www.w3.org/2000/svg\' width=\'48\' height=\'48\' viewBox=\'0 0 48 48\' fill=\'%2300bcd4\'><polygon points=\'24,8 40,40 8,40\' /></svg>'">
+                <span class="text-xs text-white mt-1">雷射($350)</span>
+            </div>
+            <div class="tower-card cursor-pointer border-transparent p-1 rounded-lg flex flex-col items-center" onclick="selectTower('cactus')">
+                <img src="Turret/Tower05.png" class="w-12 h-12 object-contain rounded" alt="Cactus" onerror="this.src='data:image/svg+xml;utf8,<svg xmlns=\'http://www.w3.org/2000/svg\' width=\'48\' height=\'48\' viewBox=\'0 0 48 48\' fill=\'%232e7d32\'><path d=\'M22 10 L26 10 L26 30 L22 30 Z\' /><path d=\'M16 20 L22 20 L22 28 L16 28 Z\' /><path d=\'M26 20 L32 20 L32 28 L26 28 Z\' /></svg>'">
+                <span class="text-xs text-white mt-1">仙人掌($250)</span>
+            </div>
+            <div class="tower-card cursor-pointer border-transparent p-1 rounded-lg flex flex-col items-center" onclick="selectTower('airport')">
+                <img src="Turret/Tower06.png" class="w-12 h-12 object-contain rounded" alt="Airport" onerror="this.src='data:image/svg+xml;utf8,<svg xmlns=\'http://www.w3.org/2000/svg\' width=\'48\' height=\'48\' viewBox=\'0 0 48 48\' fill=\'%234285f4\'><polygon points=\'14,34 24,10 34,34\' /></svg>'">
+                <span class="text-xs text-white mt-1">機場($500)</span>
+            </div>
+            <div class="tower-card cursor-pointer border-transparent p-1 rounded-lg flex flex-col items-center" onclick="selectTower('aa')">
+                <img src="Turret/Tower07.png" class="w-12 h-12 object-contain rounded" alt="AA" onerror="this.src='data:image/svg+xml;utf8,<svg xmlns=\'http://www.w3.org/2000/svg\' width=\'48\' height=\'48\' viewBox=\'0 0 48 48\' fill=\'%23e53935\'><circle cx=\'24\' cy=\'24\' r=\'8\' /><line x1=\'8\' y1=\'8\' x2=\'40\' y2=\'40\' stroke=\'white\' stroke-width=\'4\'/></svg>'">
+                <span class="text-xs text-white mt-1">防空($300)</span>
+            </div>
+            <div class="tower-card cursor-pointer border-transparent p-1 rounded-lg flex flex-col items-center" onclick="selectTower('farm')">
+                <img src="Turret/Tower08.png" class="w-12 h-12 object-contain rounded" alt="Farm" onerror="this.src='data:image/svg+xml;utf8,<svg xmlns=\'http://www.w3.org/2000/svg\' width=\'48\' height=\'48\' viewBox=\'0 0 48 48\' fill=\'%238bc34a\'><rect x=\'12\' y=\'20\' width=\'24\' height=\'16\' fill=\'%236d4c41\' /><circle cx=\'24\' cy=\'14\' r=\'6\' fill=\'%23f9a825\' /></svg>'">
+                <span class="text-xs text-white mt-1">農場($400)</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- 塔功能選單 -->
+    <div id="tower-menu" class="w-[900px] mt-2 hidden bg-white/90 p-3 rounded-lg shadow-xl text-black text-sm">
+        <div class="flex items-center justify-between">
+            <p class="font-bold" id="menu-tower-name">砲塔</p>
+            <div class="flex gap-2">
+                <button id="upgrade-btn" class="bg-blue-500 hover:bg-blue-600 text-white px-4 py-1 rounded">升級 ($<span id="upgrade-cost">0</span>)</button>
+                <button id="sell-btn" class="bg-gray-500 hover:bg-gray-600 text-white px-4 py-1 rounded">拆除</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 重新開始按鈕 -->
+    <div id="restart-container" class="w-[900px] mt-2 flex justify-center hidden">
+        <button id="restart-btn" class="bg-green-600 hover:bg-green-700 text-white px-8 py-3 rounded-full font-bold text-lg shadow-xl">重新開始</button>
+    </div>
+
+    <!-- 訊息提示 -->
+    <div id="message-box" class="w-[900px] mt-2 bg-black/70 px-4 py-1 rounded text-sm text-gray-300 hidden text-center"></div>
+
+    <script>
+        // ==================== 初始化 & 全局變數 ====================
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        const moneyDisplay = document.getElementById('money-display');
+        const healthDisplay = document.getElementById('health-display');
+        const waveDisplay = document.getElementById('wave-display');
+        const towerMenu = document.getElementById('tower-menu');
+        const restartContainer = document.getElementById('restart-container');
+        const restartBtn = document.getElementById('restart-btn');
+
+        let money = 900;
+        let health = 20;
+        let wave = 0;
+        let isWaveActive = false;
+        let selectedTowerType = null;
+        let activeTowerMenu = null;
+        let gameSpeed = 1;
+
+        // 塔定義 (機場塔 antiAir 改為 false，使其能攻擊所有敵人)
+        const TOWER_DEFS = {
+            archer: { name: '弓箭塔', cost: 100, range: 150, damage: 12, fireRate: 50, type: 'single', antiAir: false },
+            cannon: { name: '火砲塔', cost: 150, range: 130, damage: 35, fireRate: 90, type: 'aoe', antiAir: false },
+            mg: { name: '機槍塔', cost: 200, range: 180, damage: 6, fireRate: 10, type: 'single', antiAir: false },
+            laser: { name: '雷射塔', cost: 350, range: 220, damage: 1.2, fireRate: 1, type: 'laser', antiAir: false },
+            cactus: { name: '仙人掌塔', cost: 250, range: 110, damage: 18, fireRate: 45, type: 'slow', antiAir: false },
+            airport: { name: '機場塔', cost: 500, range: 400, damage: 60, fireRate: 180, type: 'air', antiAir: false }, // 改為false，可對地對空
+            aa: { name: '防空炮', cost: 300, range: 220, damage: 45, fireRate: 25, type: 'aa', antiAir: true },        // 只能對空
+            farm: { name: '農場', cost: 400, range: 0, damage: 0, fireRate: 0, type: 'farm', antiAir: false, produceAmount: 20, produceInterval: 180 }
+        };
+
+        // 精靈圖快取
+        const spriteCache = {};
+        const IMAGES = {
+    	archer: 'Turret/Tower01.png', 
+    	cannon: 'Turret/Tower02.png', 
+    	laser: 'Turret/Tower03.png',
+    	mg: 'Turret/Tower04.png', 
+    	cactus: 'Turret/Tower05.png', 
+    	airport: 'Turret/Tower06.png',
+    	aa: 'Turret/Tower07.png', 
+    	farm: 'Turret/Tower08.png'
+	};
+        Object.keys(IMAGES).forEach(k => { const img = new Image(); img.src = IMAGES[k]; spriteCache[k] = img; });
+
+        // 路徑點
+        const path = [
+            {x: -50, y: 150}, {x: 200, y: 150}, {x: 200, y: 450}, 
+            {x: 500, y: 450}, {x: 500, y: 100}, {x: 750, y: 100}, {x: 750, y: 650}
+        ];
+
+        // ==================== 輔助函數 ====================
+        function distToSegment(p, v, w) {
+            const l2 = Math.pow(v.x - w.x, 2) + Math.pow(v.y - w.y, 2);
+            if (l2 === 0) return Math.sqrt(Math.pow(p.x - v.x, 2) + Math.pow(p.y - v.y, 2));
+            let t = ((p.x - v.x) * (w.x - v.x) + (p.y - v.y) * (w.y - v.y)) / l2;
+            t = Math.max(0, Math.min(1, t));
+            return Math.sqrt(Math.pow(p.x - (v.x + t * (w.x - v.x)), 2) + Math.pow(p.y - (v.y + t * (w.y - v.y)), 2));
+        }
+
+        function isPointNearPath(x, y, threshold = 45) {
+            for (let i = 0; i < path.length - 1; i++) {
+                if (distToSegment({x, y}, path[i], path[i+1]) < threshold) return true;
+            }
+            return false;
+        }
+
+        function showMessage(txt) {
+            const box = document.getElementById('message-box');
+            box.innerText = txt; box.classList.remove('hidden');
+            setTimeout(() => box.classList.add('hidden'), 2500);
+        }
+
+        // ==================== 敵人類 (支援多種類型) ====================
+        class Enemy {
+            constructor(waveLevel, type = 'normal') {
+                this.x = path[0].x;
+                this.y = path[0].y;
+                this.pathIndex = 0;
+                this.type = type;
+                this.alive = true;
+                this.distanceTraveled = 0;
+                this.isSlowed = 0;
+                this.flying = false;
+
+                let baseHp = 60 + waveLevel * 30;
+                let baseSpeed = 1.2 + waveLevel * 0.08;
+                let baseReward = 15 + waveLevel;
+                this.size = 16;
+
+                switch(type) {
+                    case 'fast':
+                        this.speed = baseSpeed * 1.7;
+                        this.health = baseHp * 0.7;
+                        this.reward = baseReward + 5;
+                        break;
+                    case 'tank':
+                        this.speed = baseSpeed * 0.6;
+                        this.health = baseHp * 2.8;
+                        this.reward = baseReward + 20;
+                        this.size = 26;
+                        break;
+                    case 'flying':
+                        this.flying = true;
+                        this.speed = baseSpeed * 1.5;
+                        this.health = baseHp * 0.9;
+                        this.reward = baseReward + 8;
+                        break;
+                    case 'boss':
+                        this.health = baseHp * 8;
+                        this.speed = baseSpeed * 0.5;
+                        this.reward = baseReward * 10;
+                        this.size = 40;
+                        break;
+                    default:
+                        this.speed = baseSpeed;
+                        this.health = baseHp;
+                        this.reward = baseReward;
+                }
+                this.baseHealth = this.health;
+                if (this.flying) this.size = 18;
+            }
+
+            update() {
+                if (this.isSlowed > 0) this.isSlowed--;
+
+                const target = path[this.pathIndex + 1];
+                if (!target) {
+                    health--;
+                    this.alive = false;
+                    return;
+                }
+
+                const dx = target.x - this.x;
+                const dy = target.y - this.y;
+                const dist = Math.sqrt(dx*dx + dy*dy);
+                const step = (this.isSlowed > 0 ? this.speed * 0.5 : this.speed);
+
+                if (dist < step) {
+                    this.pathIndex++;
+                    if (this.pathIndex >= path.length - 1) {
+                        health--;
+                        this.alive = false;
+                        return;
+                    }
+                } else {
+                    this.x += (dx / dist) * step;
+                    this.y += (dy / dist) * step;
+                    this.distanceTraveled += step;
+                }
+
+                if (this.health <= 0) {
+                    this.alive = false;
+                    money += this.reward;
+                }
+            }
+
+            draw() {
+                ctx.save();
+                ctx.fillStyle = 'rgba(0,0,0,0.2)';
+                ctx.beginPath(); ctx.ellipse(this.x, this.y + 10, this.size, this.size/2, 0, 0, Math.PI*2); ctx.fill();
+                let color = '#27ae60';
+                if (this.type === 'fast') color = '#f1c40f';
+                else if (this.type === 'tank') color = '#c0392b';
+                else if (this.type === 'flying') color = '#3498db';
+                else if (this.type === 'boss') color = '#9b59b6';
+                if (this.isSlowed > 0) color = '#7f8c8d';
+                ctx.fillStyle = color;
+                ctx.beginPath(); ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2); ctx.fill();
+                const barW = this.size * 2;
+                ctx.fillStyle = '#ff0000'; ctx.fillRect(this.x - this.size, this.y - this.size - 12, barW, 4);
+                ctx.fillStyle = '#00ff00'; ctx.fillRect(this.x - this.size, this.y - this.size - 12, barW * (this.health / this.baseHealth), 4);
+                ctx.restore();
+            }
+        }
+
+        // ==================== 波次管理器 ====================
+        const waveManager = {
+            spawnTimer: 0,
+            spawnIndex: 0,
+            spawnCount: 0,
+            active: false,
+
+            start() {
+                if (this.active) return;
+                wave++;
+                this.spawnIndex = 0;
+                this.spawnCount = 6 + wave * 3;
+                this.active = true;
+                this.spawnTimer = 0;
+                showMessage(`第 ${wave} 波開始！`);
+            },
+
+            update() {
+                if (!this.active) return;
+                if (health <= 0) { this.active = false; return; }
+
+                this.spawnTimer++;
+                let interval = Math.max(40 - wave * 2, 15);
+                if (this.spawnTimer >= interval) {
+                    this.spawnTimer = 0;
+                    this.spawnEnemy();
+                    this.spawnIndex++;
+                    if (this.spawnIndex >= this.spawnCount) {
+                        this.active = false;
+                    }
+                }
+            },
+
+            spawnEnemy() {
+                let r = Math.random();
+                let type = 'normal';
+                if (wave % 10 === 0) {
+                    type = 'boss';
+                } else {
+                    if (r < 0.15) type = 'fast';
+                    else if (r < 0.3) type = 'tank';
+                    else if (r < 0.45) type = 'flying';
+                }
+                enemies.push(new Enemy(wave, type));
+            }
+        };
+
+        // ==================== 飛機 (機場塔特效) ====================
+        class Plane {
+            constructor(parentTower) {
+                this.parent = parentTower;
+                this.x = parentTower.x;
+                this.y = parentTower.y;
+                this.angle = Math.random() * Math.PI * 2;
+                this.radius = 60;
+                this.speed = 0.05;
+            }
+            update() {
+                this.angle += this.speed;
+                this.x = this.parent.x + Math.cos(this.angle) * this.radius;
+                this.y = this.parent.y + Math.sin(this.angle) * this.radius;
+            }
+            draw() {
+                ctx.fillStyle = '#ecf0f1';
+                ctx.beginPath();
+                ctx.moveTo(this.x, this.y - 8);
+                ctx.lineTo(this.x + 10, this.y + 5);
+                ctx.lineTo(this.x - 10, this.y + 5);
+                ctx.closePath();
+                ctx.fill();
+            }
+        }
+
+        // ==================== 投射物（基類）====================
+        class Projectile {
+            constructor(x, y, target, def) {
+                this.x = x; this.y = y; this.target = target; this.def = def;
+                this.speed = 8; this.dead = false;
+            }
+            update() {
+                if (!this.target.alive) { this.dead = true; return; }
+                const dx = this.target.x - this.x;
+                const dy = this.target.y - this.y;
+                const dist = Math.sqrt(dx*dx + dy*dy);
+                if (dist < this.speed) { this.hit(); this.dead = true; }
+                else { this.x += (dx/dist)*this.speed; this.y += (dy/dist)*this.speed; }
+            }
+            hit() {
+                const hitX = this.x, hitY = this.y;
+                if (this.def.type === 'aoe') {
+                    enemies.forEach(e => {
+                        const d = Math.sqrt(Math.pow(e.x - hitX, 2) + Math.pow(e.y - hitY, 2));
+                        if (d < 70) e.health -= this.def.damage;
+                    });
+                    createExplosion(hitX, hitY, '#e67e22');
+                } else if (this.def.type === 'slow') {
+                    this.target.health -= this.def.damage;
+                    this.target.isSlowed = 60;
+                } else {
+                    this.target.health -= this.def.damage;
+                }
+            }
+            draw() {
+                ctx.fillStyle = (this.def.type === 'aoe' || this.def.type === 'air') ? '#f1c40f' : '#ecf0f1';
+                ctx.beginPath(); ctx.arc(this.x, this.y, 4, 0, Math.PI*2); ctx.fill();
+            }
+        }
+
+        // ==================== 雷射特效類（獨立管理，避免記憶體泄漏）====================
+        class LaserEffect {
+            constructor(x1, y1, x2, y2, life = 2) {
+                this.x1 = x1; this.y1 = y1; this.x2 = x2; this.y2 = y2;
+                this.life = life;          // 剩餘幀數
+                this.dead = false;
+            }
+            update() {
+                this.life--;
+                if (this.life <= 0) this.dead = true;
+            }
+            draw() {
+                ctx.strokeStyle = 'rgba(0, 255, 255, ' + (this.life / 5) + ')';
+                ctx.lineWidth = this.life;
+                ctx.beginPath();
+                ctx.moveTo(this.x1, this.y1);
+                ctx.lineTo(this.x2, this.y2);
+                ctx.stroke();
+            }
+        }
+
+        // 爆炸粒子
+        function createExplosion(x, y, color) {
+            for(let i=0; i<10; i++) particles.push({ x, y, vx: (Math.random()-0.5)*5, vy: (Math.random()-0.5)*5, life: 25, color });
+        }
+
+        // ==================== 塔類 ====================
+        class Tower {
+            constructor(x, y, type) {
+                this.x = x; this.y = y; this.type = type;
+                this.def = { ...TOWER_DEFS[type] };
+                this.level = 1; 
+                this.cooldown = 0; 
+                this.target = null;
+                if (type === 'airport') this.plane = new Plane(this);
+                if (type === 'farm') {
+                    this.produceCooldown = 0;
+                    this.produceInterval = this.def.produceInterval;
+                    this.produceAmount = this.def.produceAmount;
+                }
+            }
+            draw() {
+                ctx.save();
+                if (activeTowerMenu === this) {
+                    ctx.beginPath(); ctx.arc(this.x, this.y, this.def.range, 0, Math.PI*2);
+                    ctx.fillStyle = 'rgba(255,255,255,0.05)'; ctx.fill();
+                    ctx.strokeStyle = 'rgba(255,255,255,0.2)'; ctx.stroke();
+                }
+                const img = spriteCache[this.type];
+                if (img && img.complete) ctx.drawImage(img, this.x - 25, this.y - 25, 50, 50);
+                else {
+                    ctx.fillStyle = '#f39c12';
+                    ctx.fillRect(this.x-20, this.y-20, 40, 40);
+                }
+                if (this.plane) this.plane.draw();
+                ctx.fillStyle = 'white'; ctx.font = '10px Arial'; ctx.fillText('Lv.' + this.level, this.x - 10, this.y + 30);
+                ctx.restore();
+            }
+            update() {
+                if (this.plane) this.plane.update();
+
+                if (this.type === 'farm') {
+                    if (this.produceCooldown <= 0) {
+                        money += this.produceAmount;
+                        this.produceCooldown = this.produceInterval;
+                        particles.push({ x: this.x, y: this.y-20, vx: 0, vy: -2, life: 15, color: '#f1c40f' });
+                    } else {
+                        this.produceCooldown--;
+                    }
+                    return;
+                }
+
+                if (this.cooldown > 0) this.cooldown--;
+                
+                if (!this.target || !this.target.alive || this.getDist(this.target) > this.def.range) {
+                    this.target = this.findTarget();
+                }
+
+                if (this.target && this.target.alive) {
+                    if (this.def.type === 'laser') {
+                        this.target.health -= this.def.damage;
+                        // 使用 LaserEffect 類別
+                        projectiles.push(new LaserEffect(this.x, this.y, this.target.x, this.target.y, 2));
+                    } else if (this.cooldown <= 0) {
+                        const shootPos = this.plane ? {x: this.plane.x, y: this.plane.y} : {x: this.x, y: this.y};
+                        projectiles.push(new Projectile(shootPos.x, shootPos.y, this.target, this.def));
+                        this.cooldown = this.def.fireRate;
+                    }
+                }
+            }
+            findTarget() {
+                let bestEnemy = null;
+                let maxDist = -1;
+                for (const e of enemies) {
+                    if (!e.alive) continue;
+                    // 對空檢查: 如果敵人 flying 且塔不具 antiAir 則跳過
+                    if (e.flying && !this.def.antiAir) continue;
+                    // 如果塔是防空專用且敵人非飛行，則跳過
+                    if (this.def.antiAir && !e.flying) continue;
+
+                    const d = this.getDist(e);
+                    if (d <= this.def.range) {
+                        if (e.distanceTraveled > maxDist) {
+                            maxDist = e.distanceTraveled;
+                            bestEnemy = e;
+                        }
+                    }
+                }
+                return bestEnemy;
+            }
+            getDist(obj) { return Math.sqrt(Math.pow(this.x - obj.x, 2) + Math.pow(this.y - obj.y, 2)); }
+        }
+
+        // ==================== 遊戲狀態陣列 ====================
+        let towers = [];
+        let enemies = [];
+        let projectiles = [];
+        let particles = [];
+
+        // ==================== UI 操作 ====================
+        function selectTower(type) {
+            selectedTowerType = type;
+            document.querySelectorAll('.tower-card').forEach(c => c.classList.remove('selected'));
+            event.currentTarget.classList.add('selected');
+            showMessage(`選中 ${TOWER_DEFS[type].name}`);
+        }
+
+        canvas.addEventListener('mousedown', (e) => {
+            const rect = canvas.getBoundingClientRect();
+            const mouseX = e.clientX - rect.left;
+            const mouseY = e.clientY - rect.top;
+            const clickedTower = towers.find(t => Math.sqrt(Math.pow(t.x-mouseX, 2)+Math.pow(t.y-mouseY, 2)) < 30);
+            
+            if (clickedTower) { showTowerMenu(clickedTower); return; }
+            towerMenu.classList.add('hidden');
+            activeTowerMenu = null;
+
+            if (selectedTowerType) {
+                const def = TOWER_DEFS[selectedTowerType];
+                if (isPointNearPath(mouseX, mouseY)) { showMessage("不能建在道路上！"); return; }
+                if (towers.some(t => Math.sqrt(Math.pow(t.x-mouseX, 2)+Math.pow(t.y-mouseY, 2)) < 40)) { showMessage("太擠了！"); return; }
+
+                if (money >= def.cost) {
+                    towers.push(new Tower(mouseX, mouseY, selectedTowerType));
+                    money -= def.cost;
+                } else showMessage("金幣不足！");
+            }
+        });
+
+        function showTowerMenu(tower) {
+            activeTowerMenu = tower;
+            towerMenu.classList.remove('hidden');
+            document.getElementById('menu-tower-name').innerText = `${tower.def.name} Lv.${tower.level}`;
+            const upCost = Math.floor(tower.def.cost * 0.8 * tower.level);
+            document.getElementById('upgrade-cost').innerText = upCost;
+            
+            document.getElementById('upgrade-btn').onclick = () => {
+                if (money >= upCost) {
+                    money -= upCost;
+                    tower.level++;
+                    tower.def.damage *= 1.4;
+                    tower.def.range *= 1.1;
+                    tower.def.fireRate = Math.max(tower.def.fireRate * 0.9, 2);
+                    if (tower.type === 'farm') {
+                        tower.produceAmount = Math.floor(tower.produceAmount * 1.3);
+                        tower.produceInterval = Math.max(tower.produceInterval * 0.85, 60);
+                    }
+                    towerMenu.classList.add('hidden');
+                    activeTowerMenu = null;
+                }
+            };
+            document.getElementById('sell-btn').onclick = () => {
+                money += Math.floor(tower.def.cost * 0.5 * tower.level);
+                towers = towers.filter(t => t !== tower);
+                towerMenu.classList.add('hidden');
+                activeTowerMenu = null;
+            };
+        }
+
+        // 速度控制
+        document.getElementById('speed1').onclick = () => { gameSpeed = 1; document.querySelectorAll('.speed-btn').forEach(b=>b.classList.remove('active')); document.getElementById('speed1').classList.add('active'); };
+        document.getElementById('speed2').onclick = () => { gameSpeed = 2; document.querySelectorAll('.speed-btn').forEach(b=>b.classList.remove('active')); document.getElementById('speed2').classList.add('active'); };
+        document.getElementById('speed4').onclick = () => { gameSpeed = 4; document.querySelectorAll('.speed-btn').forEach(b=>b.classList.remove('active')); document.getElementById('speed4').classList.add('active'); };
+
+        document.getElementById('start-wave-btn').onclick = () => {
+            if (waveManager.active) return;
+            waveManager.start();
+        };
+
+        function resetGame() {
+            money = 900;
+            health = 20;
+            wave = 0;
+            isWaveActive = false;
+            selectedTowerType = null;
+            activeTowerMenu = null;
+            towers = [];
+            enemies = [];
+            projectiles = [];
+            particles = [];
+            waveManager.active = false;
+            waveManager.spawnTimer = 0;
+            waveManager.spawnIndex = 0;
+            document.querySelectorAll('.tower-card').forEach(c => c.classList.remove('selected'));
+            towerMenu.classList.add('hidden');
+            restartContainer.classList.add('hidden');
+            showMessage("遊戲重新開始");
+        }
+        restartBtn.onclick = resetGame;
+
+        // ==================== 遊戲主循環 ====================
+        function loop() {
+            for (let s = 0; s < gameSpeed; s++) {
+                if (health > 0) {
+                    waveManager.update();
+                    enemies.forEach(e => e.update());
+                    towers.forEach(t => t.update());
+                    projectiles.forEach(p => p.update()); // 所有投射物都有 update()
+                }
+                // 粒子更新
+                particles = particles.filter(p => {
+                    p.x += p.vx; p.y += p.vy; p.life--;
+                    return p.life > 0;
+                });
+                // 清理死亡的投射物 (包括 LaserEffect)
+                projectiles = projectiles.filter(p => !p.dead);
+                enemies = enemies.filter(e => e.alive);
+            }
+
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            // 繪製路徑
+            ctx.strokeStyle = '#3d4444'; ctx.lineWidth = 60; ctx.lineJoin = 'round'; ctx.lineCap = 'round';
+            ctx.beginPath(); ctx.moveTo(path[0].x, path[0].y);
+            for(let i=1; i<path.length; i++) ctx.lineTo(path[i].x, path[i].y);
+            ctx.stroke();
+            ctx.strokeStyle = '#4b5563'; ctx.lineWidth = 50; ctx.stroke();
+
+            towers.forEach(t => t.draw());
+            enemies.forEach(e => e.draw());
+            projectiles.forEach(p => p.draw()); // 統一套用 draw()
+            particles.forEach(p => {
+                ctx.fillStyle = p.color; ctx.globalAlpha = p.life / 25;
+                ctx.fillRect(p.x, p.y, 3, 3); ctx.globalAlpha = 1;
+            });
+
+            moneyDisplay.innerText = Math.floor(money);
+            healthDisplay.innerText = health;
+            waveDisplay.innerText = wave;
+
+            if (health <= 0) {
+                ctx.fillStyle = 'rgba(0,0,0,0.8)'; ctx.fillRect(0, 0, canvas.width, canvas.height);
+                ctx.fillStyle = 'white'; ctx.font = 'bold 50px Arial'; ctx.textAlign = 'center';
+                ctx.fillText('遊戲結束', canvas.width/2, canvas.height/2);
+                restartContainer.classList.remove('hidden');
+                waveManager.active = false;
+            } else {
+                restartContainer.classList.add('hidden');
+            }
+
+            requestAnimationFrame(loop);
+        }
+
+        window.onload = loop;
+    </script>
+</body>
+</html>
