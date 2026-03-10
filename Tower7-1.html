@@ -108,6 +108,8 @@
         const towerMenu = document.getElementById('tower-menu');
         const restartContainer = document.getElementById('restart-container');
         const restartBtn = document.getElementById('restart-btn');
+	const caa1Image = new Image();
+	caa1Image.src = 'CMQ/CAA1.png'; // 我要求的圖片路徑
 
         let money = 900;
         let health = 20;
@@ -256,23 +258,48 @@
             }
 
             draw() {
-                ctx.save();
-                ctx.fillStyle = 'rgba(0,0,0,0.2)';
-                ctx.beginPath(); ctx.ellipse(this.x, this.y + 10, this.size, this.size/2, 0, 0, Math.PI*2); ctx.fill();
-                let color = '#27ae60';
-                if (this.type === 'fast') color = '#f1c40f';
-                else if (this.type === 'tank') color = '#c0392b';
-                else if (this.type === 'flying') color = '#3498db';
-                else if (this.type === 'boss') color = '#9b59b6';
-                if (this.isSlowed > 0) color = '#7f8c8d';
-                ctx.fillStyle = color;
-                ctx.beginPath(); ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2); ctx.fill();
-                const barW = this.size * 2;
-                ctx.fillStyle = '#ff0000'; ctx.fillRect(this.x - this.size, this.y - this.size - 12, barW, 4);
-                ctx.fillStyle = '#00ff00'; ctx.fillRect(this.x - this.size, this.y - this.size - 12, barW * (this.health / this.baseHealth), 4);
-                ctx.restore();
-            }
+        ctx.save();
+        // 繪製陰影
+        ctx.fillStyle = 'rgba(0,0,0,0.2)';
+        ctx.beginPath(); 
+        ctx.ellipse(this.x, this.y + 10, this.size, this.size/2, 0, 0, Math.PI*2); 
+        ctx.fill();
+
+        if (this.type === 'flying' && caa1Image.complete) {
+            // 如果是藍色空軍敵人，且圖片已載入，則繪製圖片
+            const bobbing = Math.sin(Date.now() / 200) * 5; // 增加一點飛行晃動感
+            ctx.drawImage(
+                caa1Image, 
+                this.x - this.size * 1.5, 
+                this.y - this.size * 1.5 + bobbing, 
+                this.size * 3, 
+                this.size * 3
+            );
+        } else {
+            // 原有的幾何圖形繪製邏輯
+            let color = '#27ae60';
+            if (this.type === 'fast') color = '#f1c40f';
+            else if (this.type === 'tank') color = '#c0392b';
+            else if (this.type === 'flying') color = '#3498db'; // 備用藍色
+            else if (this.type === 'boss') color = '#9b59b6';
+            
+            if (this.isSlowed > 0) color = '#7f8c8d';
+            
+            ctx.fillStyle = color;
+            ctx.beginPath(); 
+            ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2); 
+            ctx.fill();
         }
+
+        // 血條繪製
+        const barW = this.size * 2;
+        ctx.fillStyle = '#ff0000'; 
+        ctx.fillRect(this.x - this.size, this.y - this.size - 12, barW, 4);
+        ctx.fillStyle = '#00ff00'; 
+        ctx.fillRect(this.x - this.size, this.y - this.size - 12, barW * (this.health / this.baseHealth), 4);
+        ctx.restore();
+    	}
+	}
 
         // ==================== 波次管理器 ====================
         const waveManager = {
